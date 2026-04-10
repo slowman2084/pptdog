@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# pptdog-slug — derive or create a project slug
+# Usage:
+#   pptdog-slug               → print current project slug (from .pptdog-project if exists)
+#   pptdog-slug <name>        → sanitize <name> into a slug and print it
+#   pptdog-slug --list        → list all existing project slugs
+#   pptdog-slug --new <name>  → create project directory and return slug
+set -euo pipefail
+
+PPTDOG_DIR="${PPTDOG_DIR:-$HOME/.pptdog}"
+PROJECTS_DIR="$PPTDOG_DIR/projects"
+LOCAL_FILE=".pptdog-project"
+
+cmd="${1:-}"
+
+case "$cmd" in
+  --list)
+    if [[ -d "$PROJECTS_DIR" ]]; then
+      ls "$PROJECTS_DIR" 2>/dev/null | sort
+    fi
+    ;;
+  --new)
+    name="${2:-}"
+    if [[ -z "$name" ]]; then
+      echo "Usage: pptdog-slug --new <name>" >&2
+      exit 1
+    fi
+    slug=$(echo "$name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+    # append date suffix if slug already exists
+    if [[ -d "$PROJECTS_DIR/$slug" ]]; then
+      slug="${slug}-$(date +%Y%m%d)"
+    fi
+    mkdir -p "$PROJECTS_DIR/$slug"
+    echo "$slug"
+    ;;
+  "")
+    # try local file first
+    if [[ -f "$LOCAL_FILE" ]]; then
+      cat "$LOCAL_FILE"
+    else
+      echo "" # no current project
+    fi
+    ;;
+  *)
+    # sanitize the given name
+    echo "$cmd" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//'
+    ;;
+esac

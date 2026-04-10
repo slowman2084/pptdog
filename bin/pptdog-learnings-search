@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# pptdog-learnings-search — 搜索 learnings，支持 confidence 衰减与 cross-project
+# 使用 bun 处理 JSON（衰减、去重、排序）
+#
+# 用法：
+#   pptdog-learnings-search \
+#     [--skill <skill-name>]
+#     [--type <type>]
+#     [--style <share|report|mixed>]
+#     [--audience <engineer|manager|mixed>]
+#     [--limit <n>]              # 默认 5
+#     [--slug <project-slug>]    # 项目级优先
+#     [--cross-project]          # 跨项目搜索（最多 5 个其他项目）
+#     [--min-confidence <n>]     # 默认 4（衰减后）
+#     [--format <pretty|json>]   # 默认 pretty
+
+set -euo pipefail
+
+PPTDOG_HOME="${HOME}/.pptdog"
+
+SKILL=""; TYPE=""; STYLE=""; AUDIENCE=""
+LIMIT=5; SLUG=""; MIN_CONFIDENCE=4; FORMAT="pretty"
+CROSS_PROJECT=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skill)          SKILL="$2";          shift 2 ;;
+    --type)           TYPE="$2";           shift 2 ;;
+    --style)          STYLE="$2";          shift 2 ;;
+    --audience)       AUDIENCE="$2";       shift 2 ;;
+    --limit)          LIMIT="$2";          shift 2 ;;
+    --slug)           SLUG="$2";           shift 2 ;;
+    --min-confidence) MIN_CONFIDENCE="$2"; shift 2 ;;
+    --format)         FORMAT="$2";         shift 2 ;;
+    --cross-project)  CROSS_PROJECT=true;  shift ;;
+    *) echo "错误：未知参数 $1" >&2; exit 1 ;;
+  esac
+done
+
+if ! command -v bun &>/dev/null; then
+  echo "错误：需要 bun，请先安装：curl -fsSL https://bun.sh/install | bash" >&2; exit 1
+fi
+
+# 收集要搜索的文件列表（JSONL，换行分隔）
+FILES=()
+if [[ -n "$SLUG" && -f "${PPTDOG_HOME}/projects/${SLUG}/learnings.jsonl" ]]; then
+  FILES+=("${PPTDOG_HOME}/projects/${SLUG}/learnings.jsonl")
+fi
+if [[ -f "${PPTDOG_HOME}/learnings.jsonl" ]]; then
+  FILES+=("${PPTDOG_HOME}/learnings.jsonl")
+fi
+if [[ "$CROSS_PROJECT" == "true" ]]; then
+  while IFS= read -r f; do
+    # 跳过当前项目已加入的
+    [[ -n "$SLUG" && "$f" == *"/${SLUG}/"* ]] && continue
+    FILES+=("$f")
+  done < <(find "${PPTDOG_HOME}/projects" -name "learnings.jsonl" 2>/dev/null | head -5 || true)
+fi
+
+if [[ ${#FILES[@]} -eq 0 ]]; then
+  echo "No learnings found."
+  exit 0
+fi
+
+# 把所有文件路径传给 bun，用 bun 处理所有逻辑
+FILES_JSON=$(printf '%s\n' "${FILES[@]}" | bun -e "
+const lines = (await Bun.stdin.text()).trim().split('\n').filter(Boolean);
+console.log(JSON.stringify(lines));
+")
+
+bun -e "
+const fs = require('fs');
+
+const files   = ${FILES_JSON};
+const filterSkill    = '${SKILL}';
+const filterType     = '${TYPE}';
+const filterStyle    = '${STYLE}';
+const filterAudience = '${AUDIENCE}';
+const limit          = ${LIMIT};
+const minConf        = ${MIN_CONFIDENCE};
+const fmt            = '${FORMAT}';
+const now            = Date.now();
+
+// 读取所有行
+const allEntries = [];
+for (const file of files) {
+  if (!fs.existsSync(file)) continue;
+  const lines = fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean);
+  for (const line of lines) {
+    try { allEntries.push(JSON.parse(line)); } catch {}
+  }
+}
+
+// Confidence 衰减（observed/inferred：每 30 天 -1，最低 0）
+// user-stated 不衰减
+function effectiveConf(e) {
+  let conf = e.confidence ?? 5;
+  if (e.source === 'observed' || e.source === 'inferred') {
+    const days = Math.floor((now - new Date(e.ts ?? 0).getTime()) / 86400000);
+    conf = Math.max(0, conf - Math.floor(days / 30));
+  }
+  return conf;
+}
+
+// 过滤
+const filtered = allEntries.filter(e => {
+  if (filterSkill    && e.skill              !== filterSkill)    return false;
+  if (filterType     && e.type               !== filterType)     return false;
+  if (filterStyle    && e.context?.style     !== filterStyle)    return false;
+  if (filterAudience && e.context?.audience  !== filterAudience) return false;
+  if (effectiveConf(e) < minConf) return false;
+  return true;
+});
+
+// 去重（同 key，保留最新）
+const seen = new Map();
+for (const e of filtered) {
+  const existing = seen.get(e.key);
+  if (!existing || new Date(e.ts) > new Date(existing.ts)) {
+    seen.set(e.key, e);
+  }
+}
+
+// 排序（衰减后 confidence 降序）+ 限量
+const results = [...seen.values()]
+  .sort((a, b) => effectiveConf(b) - effectiveConf(a))
+  .slice(0, limit);
+
+if (results.length === 0) {
+  console.log('No learnings found.');
+  process.exit(0);
+}
+
+for (const e of results) {
+  if (fmt === 'json') {
+    console.log(JSON.stringify(e));
+  } else {
+    const ec = effectiveConf(e);
+    console.log('[' + e.skill + '] ' + e.key + ' (' + ec + '/10): ' + e.insight);
+  }
+}
+"

@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# pptdog-timeline-log — 向项目 timeline.jsonl 追加事件记录
+#
+# completed 事件会自动计算 duration_seconds（从同一 skill 的最近 started 到现在）
+#
+# 用法：
+#   pptdog-timeline-log \
+#     --slug <project-slug> \
+#     --skill <skill-name> \
+#     --event <started|completed|skipped|error> \
+#     [--note "<optional note>"]
+
+set -euo pipefail
+
+# ── 常量 ────────────────────────────────────────────────────────────────────
+PPTDOG_HOME="${HOME}/.pptdog"
+
+# ── 参数默认值 ───────────────────────────────────────────────────────────────
+SLUG=""
+SKILL=""
+EVENT=""
+NOTE=""
+
+# ── 参数解析 ─────────────────────────────────────────────────────────────────
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --slug)  SLUG="$2";  shift 2 ;;
+    --skill) SKILL="$2"; shift 2 ;;
+    --event) EVENT="$2"; shift 2 ;;
+    --note)  NOTE="$2";  shift 2 ;;
+    *)
+      echo "错误：未知参数 $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# ── 必填校验 ─────────────────────────────────────────────────────────────────
+missing=()
+[[ -z "$SLUG"  ]] && missing+=("--slug")
+[[ -z "$SKILL" ]] && missing+=("--skill")
+[[ -z "$EVENT" ]] && missing+=("--event")
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+  echo "错误：缺少必填参数：${missing[*]}" >&2
+  exit 1
+fi
+
+# ── 枚举值校验 ───────────────────────────────────────────────────────────────
+case "$EVENT" in
+  started|completed|skipped|error) ;;
+  *) echo "错误：--event 必须是 started|completed|skipped|error" >&2; exit 1 ;;
+esac
+
+# ── 工具检查 ─────────────────────────────────────────────────────────────────
+if ! command -v jq &>/dev/null; then
+  echo "错误：需要 jq，请先安装：brew install jq" >&2
+  exit 1
+fi
+
+# ── 确保项目目录存在 ─────────────────────────────────────────────────────────
+PROJECT_DIR="${PPTDOG_HOME}/projects/${SLUG}"
+mkdir -p "$PROJECT_DIR"
+TIMELINE_FILE="${PROJECT_DIR}/timeline.jsonl"
+touch "$TIMELINE_FILE"
+
+# ── 当前时间 ─────────────────────────────────────────────────────────────────
+NOW_UNIX=$(date -u +%s)
+NOW_ISO=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# ── ISO8601 UTC → Unix 秒（兼容 macOS BSD date 和 GNU date）─────────────────
+iso_to_unix() {
+  local iso="$1"
+  if date --version &>/dev/null 2>&1; then
+    # GNU date
+    date -d "$iso" +%s 2>/dev/null || echo ""
+  else
+    # macOS BSD date：2026-04-10T09:00:00Z → 20260410090000
+    local clean="${iso//-/}"
+    clean="${clean//T/}"
+    clean="${clean//:/}"
+    clean="${clean//Z/}"
+    date -u -j -f "%Y%m%d%H%M%S" "${clean}" +%s 2>/dev/null || echo ""
+  fi
+}
+
+# ── 若是 completed，计算 duration_seconds ────────────────────────────────────
+DURATION_SECONDS=""
+if [[ "$EVENT" == "completed" ]] && [[ -s "$TIMELINE_FILE" ]]; then
+  # 用 jq 找同一 skill 的最近 started 事件的 ts
+  started_ts=$(jq -r \
+    --arg sk "$SKILL" \
+    'select(.skill == $sk and .event == "started") | .ts' \
+    "$TIMELINE_FILE" 2>/dev/null | tail -1 || true)
+
+  if [[ -n "$started_ts" ]]; then
+    started_unix=$(iso_to_unix "$started_ts")
+    if [[ -n "$started_unix" && "$started_unix" =~ ^[0-9]+$ ]]; then
+      DURATION_SECONDS=$(( NOW_UNIX - started_unix ))
+    fi
+  fi
+fi
+
+# ── 构建 JSON 记录 ────────────────────────────────────────────────────────────
+if [[ -n "$DURATION_SECONDS" ]]; then
+  new_record=$(jq -n \
+    --arg ts      "$NOW_ISO" \
+    --arg skill   "$SKILL" \
+    --arg event   "$EVENT" \
+    --arg note    "$NOTE" \
+    --argjson dur "$DURATION_SECONDS" \
+    '{ts:$ts, skill:$skill, event:$event, note:$note, duration_seconds:$dur}')
+else
+  new_record=$(jq -n \
+    --arg ts    "$NOW_ISO" \
+    --arg skill "$SKILL" \
+    --arg event "$EVENT" \
+    --arg note  "$NOTE" \
+    '{ts:$ts, skill:$skill, event:$event, note:$note}')
+fi
+
+# ── 原子追加：cp → append → mv ───────────────────────────────────────────────
+tmp=$(mktemp)
+cp "$TIMELINE_FILE" "$tmp"
+echo "$new_record" >> "$tmp"
+mv "$tmp" "$TIMELINE_FILE"
+
+echo "已记录事件：slug=${SLUG} skill=${SKILL} event=${EVENT}${DURATION_SECONDS:+ duration=${DURATION_SECONDS}s}" >&2

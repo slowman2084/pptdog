@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# pptdog-project-status — 打印项目的完整状态（供 AI Preamble 读取）
+#
+# 用法：
+#   pptdog-project-status <slug>
+#
+# 输出示例（plain text，给 AI 读）：
+#   === pptdog 项目状态 ===
+#   Slug: my-talk
+#   目录: ~/.pptdog/projects/my-talk/
+#   ...
+
+set -euo pipefail
+
+# ── 常量 ────────────────────────────────────────────────────────────────────
+PPTDOG_HOME="${HOME}/.pptdog"
+
+# ── 参数校验 ─────────────────────────────────────────────────────────────────
+SLUG="${1:-}"
+if [[ -z "$SLUG" ]]; then
+  echo "用法：pptdog-project-status <slug>" >&2
+  exit 1
+fi
+
+PROJECT_DIR="${PPTDOG_HOME}/projects/${SLUG}"
+
+if [[ ! -d "$PROJECT_DIR" ]]; then
+  echo "错误：项目 \"${SLUG}\" 不存在（${PROJECT_DIR}）" >&2
+  exit 1
+fi
+
+# ── 工具检查 ─────────────────────────────────────────────────────────────────
+if ! command -v jq &>/dev/null; then
+  echo "错误：需要 jq，请先安装：brew install jq" >&2
+  exit 1
+fi
+
+# ── 步骤定义（有序，格式：文件相对路径|该步骤完成后的下一步命令）────────────
+# 步骤顺序与流水线对应：
+#   ppt-hours.md → mindmap.md → details.md → slide-content.md → review.md → slides/deck.pptx
+STEP_FILES=(
+  "ppt-hours.md"
+  "mindmap.md"
+  "details.md"
+  "slide-content.md"
+  "review.md"
+  "slides/deck.pptx"
+)
+# 当某步骤缺失时，建议执行的命令（与步骤一一对应）
+STEP_NEXT_CMDS=(
+  "/ppt-hours"
+  "/plan-mindmap"
+  "/plan-details"
+  "/slide-writer"
+  "/ppt-review"
+  "/gen-slides"
+)
+TOTAL=${#STEP_FILES[@]}
+
+# ── 格式化文件修改时间 ───────────────────────────────────────────────────────
+format_mtime() {
+  local file="$1"
+  if [[ -f "$file" ]]; then
+    if date --version &>/dev/null 2>&1; then
+      # GNU date
+      date -d "@$(stat -c %Y "$file")" +"%Y-%m-%d %H:%M" 2>/dev/null || echo "未知"
+    else
+      # macOS date（BSD）
+      stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$file" 2>/dev/null || echo "未知"
+    fi
+  fi
+}
+
+# ── 读取 ppt-hours.md 中的 style/audience/duration 元数据 ────────────────────
+# 支持文件中 "key: value" 格式的行（YAML front matter 或正文）
+META_STYLE=""
+META_AUDIENCE=""
+META_DURATION=""
+extract_meta() {
+  local file="${PROJECT_DIR}/ppt-hours.md"
+  [[ -f "$file" ]] || return 0
+  while IFS= read -r raw_line; do
+    local key val
+    key=$(echo "$raw_line" | sed 's/:.*//' | tr -d ' \t\r')
+    val=$(echo "$raw_line" | sed 's/^[^:]*://' | sed 's/^[[:space:]]*//' | tr -d '\r')
+    case "$key" in
+      style)    META_STYLE="$val" ;;
+      audience) META_AUDIENCE="$val" ;;
+      duration) META_DURATION="$val" ;;
+    esac
+  done < <(grep -E "^(style|audience|duration)\s*:" "$file" 2>/dev/null || true)
+}
+
+# ── 主输出 ───────────────────────────────────────────────────────────────────
+echo "=== pptdog 项目状态 ==="
+echo "Slug: ${SLUG}"
+echo "目录: ~/.pptdog/projects/${SLUG}/"
+echo ""
+echo "已完成步骤:"
+
+completed_count=0
+next_command=""   # 第一个未完成步骤对应的命令
+
+for (( i=0; i<TOTAL; i++ )); do
+  step_file="${STEP_FILES[$i]}"
+  step_cmd="${STEP_NEXT_CMDS[$i]}"
+  full_path="${PROJECT_DIR}/${step_file}"
+
+  # 固定宽度文件名，视觉对齐
+  label=$(printf "%-20s" "$step_file")
+
+  if [[ -f "$full_path" ]]; then
+    mtime=$(format_mtime "$full_path")
+    printf "  ✓ %s (最后修改: %s)\n" "$label" "$mtime"
+    (( completed_count++ )) || true
+  else
+    printf "  ✗ %s (未创建)\n" "$label"
+    # 记录第一个缺失步骤的建议命令（即当前应执行的步骤）
+    if [[ -z "$next_command" ]]; then
+      next_command="$step_cmd"
+    fi
+  fi
+done
+
+echo ""
+echo "当前进度: ${completed_count}/${TOTAL} 步骤完成"
+
+if [[ -z "$next_command" ]]; then
+  echo "下一步建议: 全部步骤已完成 🎉"
+else
+  echo "下一步建议: ${next_command}"
+fi
+
+# ── 读取项目元数据 ────────────────────────────────────────────────────────────
+extract_meta
+
+# ── 调用 pptdog-learnings-search 获取相关 learnings ─────────────────────────
+echo ""
+echo "相关 Learnings (top 3):"
+
+# 构建搜索参数
+SEARCH_ARGS=(--slug "$SLUG" --limit 3 --format pretty --min-confidence 1)
+[[ -n "$META_STYLE"    ]] && SEARCH_ARGS+=(--style "$META_STYLE")
+[[ -n "$META_AUDIENCE" ]] && SEARCH_ARGS+=(--audience "$META_AUDIENCE")
+
+# 定位 pptdog-learnings-search（同目录优先，再 PATH）
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -x "${SCRIPT_DIR}/pptdog-learnings-search" ]]; then
+  LEARNINGS_BIN="${SCRIPT_DIR}/pptdog-learnings-search"
+elif command -v pptdog-learnings-search &>/dev/null; then
+  LEARNINGS_BIN="pptdog-learnings-search"
+else
+  echo "  （pptdog-learnings-search 未找到，跳过）"
+  exit 0
+fi
+
+# 获取搜索结果并缩进显示
+search_output=$("$LEARNINGS_BIN" "${SEARCH_ARGS[@]}" 2>/dev/null || true)
+if [[ -z "$search_output" || "$search_output" == "No learnings found." ]]; then
+  echo "  （暂无相关 Learnings）"
+else
+  while IFS= read -r line; do
+    echo "  ${line}"
+  done <<< "$search_output"
+fi

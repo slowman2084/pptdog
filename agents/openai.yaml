@@ -1,0 +1,6 @@
+interface:
+  display_name: "pptdog"
+  short_description: "演讲准备框架 — 从零到内容规划，覆盖听众分析、结构设计、内容打磨、评审和生成。支持技术分享、汇报、通用演示场景。"
+  default_prompt: "Use pptdog skills to prepare your presentation. Start with /ppt-hours to clarify your audience and message."
+policy:
+  allow_implicit_invocation: true

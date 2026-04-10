@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# pptdog-update-check — 检查是否有新版本
+#
+# 输出（一行，或无输出）：
+#   JUST_UPGRADED <old> <new>       — 刚刚升级成功
+#   UPGRADE_AVAILABLE <old> <new>   — GitHub 上有新版本
+#   （无输出）                       — 已是最新，或网络不可达，或已 snooze
+#
+# Env 覆盖（测试用）：
+#   PPTDOG_DIR          — 覆盖 pptdog 根目录
+#   PPTDOG_STATE_DIR    — 覆盖 ~/.pptdog
+#   PPTDOG_REMOTE_URL   — 覆盖远程 VERSION URL
+
+set -euo pipefail
+
+PPTDOG_DIR="${PPTDOG_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+STATE_DIR="${PPTDOG_STATE_DIR:-$HOME/.pptdog}"
+CACHE_FILE="$STATE_DIR/last-update-check"
+MARKER_FILE="$STATE_DIR/just-upgraded-from"
+SNOOZE_FILE="$STATE_DIR/update-snoozed"
+VERSION_FILE="$PPTDOG_DIR/VERSION"
+REMOTE_URL="${PPTDOG_REMOTE_URL:-https://raw.githubusercontent.com/victorhuang/pptdog/main/VERSION}"
+
+# 强制刷新（供 /pptdog-upgrade 使用）
+if [[ "${1:-}" == "--force" ]]; then
+  rm -f "$CACHE_FILE" "$SNOOZE_FILE"
+fi
+
+# 读取 update_check 配置（默认 true）
+_UC=$("$PPTDOG_DIR/bin/pptdog-config" get update_check 2>/dev/null || true)
+if [[ "$_UC" == "false" ]]; then exit 0; fi
+
+# 读取本地版本
+LOCAL=""
+if [[ -f "$VERSION_FILE" ]]; then
+  LOCAL="$(tr -d '[:space:]' < "$VERSION_FILE")"
+fi
+if [[ -z "$LOCAL" ]]; then exit 0; fi
+
+# 检查 just-upgraded marker
+if [[ -f "$MARKER_FILE" ]]; then
+  OLD="$(tr -d '[:space:]' < "$MARKER_FILE")"
+  rm -f "$MARKER_FILE" "$SNOOZE_FILE"
+  [[ -n "$OLD" ]] && echo "JUST_UPGRADED $OLD $LOCAL"
+fi
+
+# 检查缓存
+if [[ -f "$CACHE_FILE" ]]; then
+  CACHED="$(cat "$CACHE_FILE" || true)"
+  case "$CACHED" in
+    UP_TO_DATE*)        CACHE_TTL=60  ;;
+    UPGRADE_AVAILABLE*) CACHE_TTL=720 ;;
+    *)                  CACHE_TTL=0   ;;
+  esac
+  STALE=$(find "$CACHE_FILE" -mmin +"$CACHE_TTL" 2>/dev/null || true)
+  if [[ -z "$STALE" && "$CACHE_TTL" -gt 0 ]]; then
+    case "$CACHED" in
+      UP_TO_DATE*)
+        CACHED_VER="$(echo "$CACHED" | awk '{print $2}')"
+        [[ "$CACHED_VER" == "$LOCAL" ]] && exit 0
+        ;;
+      UPGRADE_AVAILABLE*)
+        CACHED_OLD="$(echo "$CACHED" | awk '{print $2}')"
+        if [[ "$CACHED_OLD" == "$LOCAL" ]]; then
+          # 检查 snooze
+          if [[ -f "$SNOOZE_FILE" ]]; then
+            SNOOZE_EPOCH="$(awk '{print $3}' "$SNOOZE_FILE" 2>/dev/null || true)"
+            SNOOZE_LEVEL="$(awk '{print $2}' "$SNOOZE_FILE" 2>/dev/null || true)"
+            NOW_EPOCH="$(date +%s)"
+            case "${SNOOZE_LEVEL:-1}" in
+              1) DUR=86400  ;;
+              2) DUR=172800 ;;
+              *) DUR=604800 ;;
+            esac
+            if [[ -n "$SNOOZE_EPOCH" ]] && (( NOW_EPOCH < SNOOZE_EPOCH + DUR )); then
+              exit 0
+            fi
+          fi
+          echo "$CACHED"
+          exit 0
+        fi
+        ;;
+    esac
+  fi
+fi
+
+# 慢路径：拉远端 VERSION
+mkdir -p "$STATE_DIR"
+REMOTE=""
+REMOTE="$(curl -sf --max-time 5 "$REMOTE_URL" 2>/dev/null | tr -d '[:space:]' || true)"
+
+# 校验：必须像版本号（防止拿到 HTML 错误页）
+if ! echo "$REMOTE" | grep -qE '^[0-9]+\.[0-9.]+$'; then
+  echo "UP_TO_DATE $LOCAL" > "$CACHE_FILE"
+  exit 0
+fi
+
+if [[ "$LOCAL" == "$REMOTE" ]]; then
+  echo "UP_TO_DATE $LOCAL" > "$CACHE_FILE"
+  exit 0
+fi
+
+echo "UPGRADE_AVAILABLE $LOCAL $REMOTE" > "$CACHE_FILE"
+echo "UPGRADE_AVAILABLE $LOCAL $REMOTE"

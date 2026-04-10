@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# pptdog-config — 读写用户配置文件 ~/.pptdog/config.json
+#
+# 用法：
+#   pptdog-config get <key>          # 读取配置项（支持 dot-notation）
+#   pptdog-config set <key> <value>  # 写入配置项（支持 dot-notation）
+#   pptdog-config list               # 打印所有配置
+#   pptdog-config reset              # 重置为默认配置
+
+set -euo pipefail
+
+# ── 常量 ────────────────────────────────────────────────────────────────────
+PPTDOG_HOME="${HOME}/.pptdog"
+CONFIG_FILE="${PPTDOG_HOME}/config.json"
+
+# ── 默认配置（JSON 字符串） ───────────────────────────────────────────────────
+DEFAULT_CONFIG='{
+  "default_style": "auto",
+  "default_duration": 30,
+  "language": "zh",
+  "proactive": true,
+  "gen_tool": "python-pptx",
+  "learnings_decay": true,
+  "learnings_max_age_days": 180
+}'
+
+# ── 工具检查 ─────────────────────────────────────────────────────────────────
+if ! command -v jq &>/dev/null; then
+  echo "错误：需要 jq，请先安装：brew install jq" >&2
+  exit 1
+fi
+
+# ── 确保配置文件存在（不存在时用默认值创建） ─────────────────────────────────
+ensure_config() {
+  mkdir -p "$PPTDOG_HOME"
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    local tmp
+    tmp=$(mktemp)
+    echo "$DEFAULT_CONFIG" > "$tmp"
+    mv "$tmp" "$CONFIG_FILE"
+    echo "已创建默认配置文件：${CONFIG_FILE}" >&2
+  fi
+}
+
+# ── dot-notation key 转为 jq path 表达式 ─────────────────────────────────────
+# 例：context.audience → .context.audience
+key_to_jq_path() {
+  local key="$1"
+  # 将 a.b.c 转为 .a.b.c
+  echo ".${key}"
+}
+
+# ── dot-notation key 转为 jq setpath 调用所需的路径数组 ─────────────────────
+# 例：context.audience → ["context","audience"]
+key_to_jq_patharray() {
+  local key="$1"
+  # 用 jq 自己把 "a.b.c" 拆成数组
+  echo "$key" | jq -Rc 'split(".")'
+}
+
+# ── 子命令分发 ───────────────────────────────────────────────────────────────
+CMD="${1:-}"
+if [[ -z "$CMD" ]]; then
+  echo "用法：pptdog-config <get|set|list|reset> [key] [value]" >&2
+  exit 1
+fi
+
+case "$CMD" in
+
+  # ── get ────────────────────────────────────────────────────────────────────
+  get)
+    KEY="${2:-}"
+    if [[ -z "$KEY" ]]; then
+      echo "用法：pptdog-config get <key>" >&2
+      exit 1
+    fi
+    ensure_config
+    JQ_PATH=$(key_to_jq_path "$KEY")
+    value=$(jq -r "${JQ_PATH} // empty" "$CONFIG_FILE" 2>/dev/null || true)
+    # key 不存在时输出空行并退出 0
+    echo "${value}"
+    ;;
+
+  # ── set ────────────────────────────────────────────────────────────────────
+  set)
+    KEY="${2:-}"
+    VALUE="${3:-}"
+    if [[ -z "$KEY" ]]; then
+      echo "用法：pptdog-config set <key> <value>" >&2
+      exit 1
+    fi
+    ensure_config
+    PATH_ARRAY=$(key_to_jq_patharray "$KEY")
+
+    # 尝试将 value 解析为 JSON（处理布尔/数字/null），失败则当字符串处理
+    set_tmp=$(mktemp)
+    if echo "$VALUE" | jq -e . &>/dev/null 2>&1; then
+      JSON_VALUE=$(echo "$VALUE" | jq -c .)
+      jq "setpath(${PATH_ARRAY}; ${JSON_VALUE})" "$CONFIG_FILE" > "$set_tmp"
+    else
+      jq --arg val "$VALUE" "setpath(${PATH_ARRAY}; \$val)" "$CONFIG_FILE" > "$set_tmp"
+    fi
+    mv "$set_tmp" "$CONFIG_FILE"
+    echo "已设置 ${KEY} = ${VALUE}" >&2
+    ;;
+
+  # ── list ───────────────────────────────────────────────────────────────────
+  list)
+    ensure_config
+    jq . "$CONFIG_FILE"
+    ;;
+
+  # ── reset ──────────────────────────────────────────────────────────────────
+  reset)
+    mkdir -p "$PPTDOG_HOME"
+    reset_tmp=$(mktemp)
+    tmp="$reset_tmp"
+    echo "$DEFAULT_CONFIG" > "$tmp"
+    mv "$tmp" "$CONFIG_FILE"
+    echo "已重置配置为默认值。" >&2
+    jq . "$CONFIG_FILE"
+    ;;
+
+  *)
+    echo "错误：未知子命令 \"${CMD}\"，支持：get|set|list|reset" >&2
+    exit 1
+    ;;
+esac

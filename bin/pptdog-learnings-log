@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+# pptdog-learnings-log — 向 learnings.jsonl 追加一条记录
+# 若同 key 已存在则更新 confidence（新旧平均），而非追加重复条目
+# 使用 bun 处理 JSON 逻辑（confidence 衰减、去重、原子写入）
+#
+# 用法：
+#   pptdog-learnings-log \
+#     --skill <skill-name> \
+#     --type <pitfall|insight|correction|preference> \
+#     --key <short-key> \
+#     --insight "<insight text>" \
+#     --confidence <1-10> \
+#     --source <observed|inferred|user-stated> \
+#     [--slug <project-slug>]
+#     [--style <share|report|mixed>]
+#     [--audience <engineer|manager|mixed>]
+#     [--duration <minutes>]
+
+set -euo pipefail
+
+PPTDOG_HOME="${HOME}/.pptdog"
+GLOBAL_LEARNINGS="${PPTDOG_HOME}/learnings.jsonl"
+
+SKILL=""; TYPE=""; KEY=""; INSIGHT=""; CONFIDENCE=""; SOURCE=""
+SLUG=""; STYLE=""; AUDIENCE=""; DURATION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skill)      SKILL="$2";      shift 2 ;;
+    --type)       TYPE="$2";       shift 2 ;;
+    --key)        KEY="$2";        shift 2 ;;
+    --insight)    INSIGHT="$2";    shift 2 ;;
+    --confidence) CONFIDENCE="$2"; shift 2 ;;
+    --source)     SOURCE="$2";     shift 2 ;;
+    --slug)       SLUG="$2";       shift 2 ;;
+    --style)      STYLE="$2";      shift 2 ;;
+    --audience)   AUDIENCE="$2";   shift 2 ;;
+    --duration)   DURATION="$2";   shift 2 ;;
+    *) echo "错误：未知参数 $1" >&2; exit 1 ;;
+  esac
+done
+
+missing=()
+[[ -z "$SKILL"      ]] && missing+=("--skill")
+[[ -z "$TYPE"       ]] && missing+=("--type")
+[[ -z "$KEY"        ]] && missing+=("--key")
+[[ -z "$INSIGHT"    ]] && missing+=("--insight")
+[[ -z "$CONFIDENCE" ]] && missing+=("--confidence")
+[[ -z "$SOURCE"     ]] && missing+=("--source")
+if [[ ${#missing[@]} -gt 0 ]]; then
+  echo "错误：缺少必填参数：${missing[*]}" >&2; exit 1
+fi
+
+if ! command -v bun &>/dev/null; then
+  echo "错误：需要 bun，请先安装：curl -fsSL https://bun.sh/install | bash" >&2; exit 1
+fi
+
+mkdir -p "$PPTDOG_HOME"
+touch "$GLOBAL_LEARNINGS"
+
+upsert_file() {
+  local target="$1"
+  touch "$target"
+  # 通过环境变量传参，避免 bash 3.2 的 @Q 兼容性问题
+  PPTDOG_LOG_TARGET="$target" \
+  PPTDOG_LOG_SKILL="$SKILL" \
+  PPTDOG_LOG_TYPE="$TYPE" \
+  PPTDOG_LOG_KEY="$KEY" \
+  PPTDOG_LOG_INSIGHT="$INSIGHT" \
+  PPTDOG_LOG_CONFIDENCE="$CONFIDENCE" \
+  PPTDOG_LOG_SOURCE="$SOURCE" \
+  PPTDOG_LOG_STYLE="$STYLE" \
+  PPTDOG_LOG_AUDIENCE="$AUDIENCE" \
+  PPTDOG_LOG_DURATION="$DURATION" \
+  bun -e "
+const fs = require('fs');
+const e = process.env;
+const path   = e.PPTDOG_LOG_TARGET;
+const now    = new Date().toISOString();
+
+const incoming = {
+  ts:         now,
+  skill:      e.PPTDOG_LOG_SKILL,
+  type:       e.PPTDOG_LOG_TYPE,
+  key:        e.PPTDOG_LOG_KEY,
+  insight:    e.PPTDOG_LOG_INSIGHT,
+  confidence: parseFloat(e.PPTDOG_LOG_CONFIDENCE),
+  source:     e.PPTDOG_LOG_SOURCE,
+  context: {
+    ...(e.PPTDOG_LOG_STYLE    ? { style:    e.PPTDOG_LOG_STYLE    } : {}),
+    ...(e.PPTDOG_LOG_AUDIENCE ? { audience: e.PPTDOG_LOG_AUDIENCE } : {}),
+    ...(e.PPTDOG_LOG_DURATION ? { duration: parseInt(e.PPTDOG_LOG_DURATION) } : {}),
+  },
+};
+
+const raw = fs.existsSync(path) ? fs.readFileSync(path, 'utf8').trim() : '';
+const lines = raw ? raw.split('\n').filter(Boolean) : [];
+
+let found = false;
+const updated = lines.map(line => {
+  try {
+    const entry = JSON.parse(line);
+    if (entry.key === incoming.key) {
+      found = true;
+      const avg = Math.round((entry.confidence + incoming.confidence) / 2 * 10) / 10;
+      process.stderr.write('已更新 key=\"' + incoming.key + '\" confidence: ' + entry.confidence + ' → ' + avg + '\n');
+      return JSON.stringify({ ...entry, ts: now, confidence: avg, insight: incoming.insight, context: incoming.context });
+    }
+    return line;
+  } catch { return line; }
+});
+
+if (!found) {
+  updated.push(JSON.stringify(incoming));
+  process.stderr.write('已追加新 learning: key=\"' + incoming.key + '\"\n');
+}
+
+const tmp = path + '.tmp.' + process.pid;
+fs.writeFileSync(tmp, updated.join('\n') + '\n');
+fs.renameSync(tmp, path);
+"
+}
+
+upsert_file "$GLOBAL_LEARNINGS"
+
+if [[ -n "$SLUG" ]]; then
+  local_dir="${PPTDOG_HOME}/projects/${SLUG}"
+  mkdir -p "$local_dir"
+  upsert_file "${local_dir}/learnings.jsonl"
+fi

@@ -1,0 +1,483 @@
+#!/usr/bin/env bash
+# pptdog setup — 一键安装脚本
+# 用法：./setup [--host <host>] [--uninstall] [--check] [--yes|-y]
+#
+# 支持的主机：
+#   --host claude-code   → ~/.claude/skills/pptdog-*/
+#   --host openclaw      → ~/.openclaw/skills/pptdog-*/
+#   --host codex         → ~/.codex/skills/pptdog-*/
+#   --host cursor        → ~/.cursor/skills/pptdog-*/
+
+set -euo pipefail
+
+# ─── 颜色 ────────────────────────────────────────────────────────────────────
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+info()    { echo -e "${BLUE}ℹ${RESET}  $*"; }
+success() { echo -e "${GREEN}✓${RESET}  $*"; }
+warn()    { echo -e "${YELLOW}⚠${RESET}  $*"; }
+error()   { echo -e "${RED}✗${RESET}  $*" >&2; }
+header()  { echo -e "\n${BOLD}${CYAN}$*${RESET}"; }
+dim()     { echo -e "${DIM}$*${RESET}"; }
+
+# ─── 常量 ────────────────────────────────────────────────────────────────────
+PPTDOG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PPTDOG_DATA="$HOME/.pptdog"
+PPTDOG_SKILLS_DIR="$PPTDOG_DIR/skills"
+
+# 主机定义：name|check_cmd|skills_dir
+declare -a HOST_DEFS=(
+  "claude-code|claude|$HOME/.claude/skills"
+  "openclaw|openclaw|$HOME/.openclaw/skills"
+  "codex|codex|$HOME/.codex/skills"
+  "cursor|cursor|$HOME/.cursor/skills"
+)
+
+# ─── 解析参数 ─────────────────────────────────────────────────────────────────
+MODE="install"       # install | uninstall | check
+SPECIFIC_HOST=""
+YES=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --host)
+      SPECIFIC_HOST="$2"
+      shift 2
+      ;;
+    --host=*)
+      SPECIFIC_HOST="${1#--host=}"
+      shift
+      ;;
+    --uninstall)
+      MODE="uninstall"
+      shift
+      ;;
+    --check)
+      MODE="check"
+      shift
+      ;;
+    --yes|-y)
+      YES=true
+      shift
+      ;;
+    --help|-h)
+      echo ""
+      echo -e "${BOLD}pptdog setup${RESET} — AI 演讲内容生产流水线安装工具"
+      echo ""
+      echo "用法："
+      echo "  ./setup                  自动检测已安装主机并询问"
+      echo "  ./setup --host openclaw  安装到指定主机"
+      echo "  ./setup --uninstall      删除所有符号链接"
+      echo "  ./setup --check          检查安装状态（不修改任何文件）"
+      echo "  ./setup --yes            跳过所有确认"
+      echo ""
+      echo "支持的主机："
+      echo "  claude-code   Claude Code CLI  → ~/.claude/skills/pptdog-*/"
+      echo "  openclaw      OpenClaw         → ~/.openclaw/skills/pptdog-*/"
+      echo "  codex         Codex CLI        → ~/.codex/skills/pptdog-*/"
+      echo "  cursor        Cursor           → ~/.cursor/skills/pptdog-*/"
+      echo ""
+      exit 0
+      ;;
+    *)
+      error "未知参数：$1"
+      echo "  运行 ./setup --help 查看用法"
+      exit 1
+      ;;
+  esac
+done
+
+# ─── 工具函数 ─────────────────────────────────────────────────────────────────
+
+# 列出所有 skill 名
+list_skills() {
+  if [[ -d "$PPTDOG_SKILLS_DIR" ]]; then
+    find "$PPTDOG_SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | sort
+  fi
+}
+
+# 检测主机是否已安装（in PATH 或常见路径）
+detect_host() {
+  local check_cmd="$1"
+  # 检查 PATH
+  if command -v "$check_cmd" &>/dev/null; then
+    return 0
+  fi
+  # 检查常见安装路径
+  local common_paths=(
+    "/usr/local/bin/$check_cmd"
+    "/opt/homebrew/bin/$check_cmd"
+    "$HOME/.local/bin/$check_cmd"
+    "$HOME/bin/$check_cmd"
+  )
+  for p in "${common_paths[@]}"; do
+    if [[ -x "$p" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# 询问用户确认（若 YES=true 则直接返回 0）
+confirm() {
+  local prompt="$1"
+  local default="${2:-Y}"
+  if [[ "$YES" == true ]]; then
+    echo -e "${DIM}  (--yes 模式，自动确认)${RESET}"
+    return 0
+  fi
+  local hint
+  if [[ "$default" == "Y" ]]; then
+    hint="[Y/n]"
+  else
+    hint="[y/N]"
+  fi
+  echo -n -e "  ${prompt} ${DIM}${hint}${RESET} "
+  read -r answer
+  answer="${answer:-$default}"
+  [[ "$answer" =~ ^[Yy]$ ]]
+}
+
+# ─── 初始化 ~/.pptdog/ ───────────────────────────────────────────────────────
+init_data_dir() {
+  header "初始化 ~/.pptdog/ 数据目录"
+
+  mkdir -p "$PPTDOG_DATA/projects"
+  mkdir -p "$PPTDOG_DATA/templates"
+
+  if [[ ! -f "$PPTDOG_DATA/learnings.jsonl" ]]; then
+    touch "$PPTDOG_DATA/learnings.jsonl"
+    success "创建 learnings.jsonl"
+  else
+    dim "  learnings.jsonl 已存在，跳过"
+  fi
+
+  if [[ ! -f "$PPTDOG_DATA/config.json" ]]; then
+    cat > "$PPTDOG_DATA/config.json" <<'EOF'
+{
+  "version": "1.0.0",
+  "proactive": true,
+  "learnings": {
+    "maxDisplay": 3,
+    "confidenceDecayDays": 30,
+    "decayAmount": 1,
+    "minConfidenceToShow": 3
+  },
+  "review": {
+    "minPassScore": 7,
+    "allowForceGenerate": true
+  },
+  "templates": {
+    "default": "default"
+  }
+}
+EOF
+    success "写入默认 config.json"
+  else
+    dim "  config.json 已存在，跳过"
+  fi
+
+  success "~/.pptdog/ 数据目录就绪"
+}
+
+# ─── 安装单个主机的 skills ────────────────────────────────────────────────────
+install_for_host() {
+  local host_name="$1"
+  local skills_base="$2"
+
+  mkdir -p "$skills_base"
+
+  local skills
+  mapfile -t skills < <(list_skills)
+
+  if [[ ${#skills[@]} -eq 0 ]]; then
+    warn "未找到任何 skill，跳过 $host_name"
+    return
+  fi
+
+  local installed=0
+  local updated=0
+
+  for skill in "${skills[@]}"; do
+    local src="$PPTDOG_SKILLS_DIR/$skill"
+    local link_name="pptdog-$skill"
+    local link_path="$skills_base/$link_name"
+
+    if [[ -L "$link_path" ]]; then
+      # 符号链接已存在 → 更新
+      rm "$link_path"
+      ln -s "$src" "$link_path"
+      dim "  ↻ 更新  $link_name → $src"
+      ((updated++)) || true
+    else
+      ln -s "$src" "$link_path"
+      success "安装  $link_name"
+      ((installed++)) || true
+    fi
+  done
+
+  echo -e "  ${GREEN}${BOLD}$host_name${RESET}：新增 ${installed} 个，更新 ${updated} 个 skill"
+}
+
+# ─── 卸载单个主机的 skills ────────────────────────────────────────────────────
+uninstall_for_host() {
+  local host_name="$1"
+  local skills_base="$2"
+
+  if [[ ! -d "$skills_base" ]]; then
+    dim "  $host_name：$skills_base 不存在，跳过"
+    return
+  fi
+
+  local removed=0
+  while IFS= read -r -d '' link; do
+    rm "$link"
+    dim "  ✗ 删除 $(basename "$link")"
+    ((removed++)) || true
+  done < <(find "$skills_base" -maxdepth 1 -name "pptdog-*" -type l -print0)
+
+  if [[ $removed -gt 0 ]]; then
+    success "$host_name：已删除 ${removed} 个符号链接"
+  else
+    dim "  $host_name：无 pptdog-* 符号链接，跳过"
+  fi
+}
+
+# ─── 检查单个主机安装状态 ────────────────────────────────────────────────────
+check_host() {
+  local host_name="$1"
+  local skills_base="$2"
+
+  echo -e "\n  ${BOLD}$host_name${RESET}  ${DIM}→ $skills_base${RESET}"
+
+  local skills
+  mapfile -t skills < <(list_skills)
+
+  for skill in "${skills[@]}"; do
+    local link_name="pptdog-$skill"
+    local link_path="$skills_base/$link_name"
+
+    if [[ -L "$link_path" ]]; then
+      local target
+      target=$(readlink "$link_path")
+      if [[ -d "$target" ]]; then
+        echo -e "    ${GREEN}✓${RESET} $link_name  ${DIM}→ $target${RESET}"
+      else
+        echo -e "    ${RED}✗${RESET} $link_name  ${YELLOW}（链接目标不存在：$target）${RESET}"
+      fi
+    else
+      echo -e "    ${DIM}–${RESET} $link_name  ${DIM}（未安装）${RESET}"
+    fi
+  done
+}
+
+# ─── 检查 python-pptx ─────────────────────────────────────────────────────────
+check_python_pptx() {
+  header "检查 python-pptx 依赖"
+  if python3 -c "import pptx" 2>/dev/null; then
+    success "python-pptx 已安装"
+  else
+    warn "python-pptx 未安装，/gen-slides 需要它才能生成 .pptx 文件"
+    echo -e "  安装方式："
+    echo -e "    ${CYAN}uv pip install python-pptx${RESET}   （推荐）"
+    echo -e "    ${CYAN}pip install python-pptx${RESET}"
+  fi
+}
+
+# ─── 打印完成信息 ─────────────────────────────────────────────────────────────
+print_summary() {
+  local -a installed_hosts=("$@")
+
+  echo ""
+  echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo -e "${BOLD}${GREEN}  pptdog 安装完成！${RESET}"
+  echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo ""
+
+  if [[ ${#installed_hosts[@]} -gt 0 ]]; then
+    echo -e "${BOLD}已安装到：${RESET}"
+    for h in "${installed_hosts[@]}"; do
+      echo -e "  ${GREEN}✓${RESET} $h"
+    done
+    echo ""
+  fi
+
+  echo -e "${BOLD}可用的 skill 命令：${RESET}"
+  local skills
+  mapfile -t skills < <(list_skills)
+  for skill in "${skills[@]}"; do
+    echo -e "  ${CYAN}/${skill}${RESET}"
+  done
+  echo ""
+
+  echo -e "${BOLD}数据目录：${RESET}"
+  echo -e "  ${DIM}~/.pptdog/projects/${RESET}     演讲项目"
+  echo -e "  ${DIM}~/.pptdog/templates/${RESET}    PPT 模板"
+  echo -e "  ${DIM}~/.pptdog/learnings.jsonl${RESET}  历史踩坑记录"
+  echo ""
+
+  echo -e "${BOLD}快速开始：${RESET}"
+  echo -e "  运行 ${CYAN}${BOLD}/ppt-hours${RESET} 开始你的第一个演讲 🎤"
+  echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 主流程
+# ═══════════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo -e "${BOLD}${CYAN}🐕 pptdog — AI 演讲内容生产流水线${RESET}"
+echo -e "${DIM}   $(date '+%Y-%m-%d %H:%M:%S')${RESET}"
+echo ""
+
+# ─── 确定要操作的主机列表 ─────────────────────────────────────────────────────
+
+declare -a TARGET_HOSTS=()   # ("host_name|skills_dir" ...)
+
+if [[ -n "$SPECIFIC_HOST" ]]; then
+  # 用户指定了主机
+  found=false
+  for def in "${HOST_DEFS[@]}"; do
+    IFS='|' read -r name _cmd skills_dir <<< "$def"
+    if [[ "$name" == "$SPECIFIC_HOST" ]]; then
+      TARGET_HOSTS+=("$name|$skills_dir")
+      found=true
+      break
+    fi
+  done
+  if [[ "$found" == false ]]; then
+    error "未知主机：$SPECIFIC_HOST"
+    echo "  支持的主机：claude-code, openclaw, codex, cursor"
+    exit 1
+  fi
+else
+  # 自动检测
+  if [[ "$MODE" == "check" ]]; then
+    # check 模式扫描所有主机（不管有没有安装）
+    for def in "${HOST_DEFS[@]}"; do
+      IFS='|' read -r name _cmd skills_dir <<< "$def"
+      TARGET_HOSTS+=("$name|$skills_dir")
+    done
+  else
+    header "自动检测已安装的主机"
+    for def in "${HOST_DEFS[@]}"; do
+      IFS='|' read -r name check_cmd skills_dir <<< "$def"
+      if detect_host "$check_cmd"; then
+        echo -e "  ${GREEN}检测到${RESET} ${BOLD}$name${RESET}  ${DIM}(${check_cmd})${RESET}"
+        if confirm "是否为 $name 安装 pptdog skills？"; then
+          TARGET_HOSTS+=("$name|$skills_dir")
+        fi
+      else
+        dim "  未检测到 $name (${check_cmd})"
+      fi
+    done
+
+    if [[ ${#TARGET_HOSTS[@]} -eq 0 ]]; then
+      warn "未检测到任何主机，也未手动选择。"
+      echo ""
+      echo -e "  使用 ${CYAN}./setup --host <主机名>${RESET} 强制安装到指定主机。"
+      echo -e "  支持：claude-code / openclaw / codex / cursor"
+      echo ""
+      exit 0
+    fi
+  fi
+fi
+
+# ─── 执行对应模式 ─────────────────────────────────────────────────────────────
+
+case "$MODE" in
+
+  # ── CHECK ──────────────────────────────────────────────────────────────────
+  check)
+    header "检查 pptdog 安装状态"
+
+    echo -e "\n  ${BOLD}数据目录 ~/.pptdog/${RESET}"
+    for item in projects templates learnings.jsonl config.json; do
+      local_path="$PPTDOG_DATA/$item"
+      if [[ -e "$local_path" ]]; then
+        echo -e "    ${GREEN}✓${RESET} $item"
+      else
+        echo -e "    ${DIM}–${RESET} $item  ${DIM}（不存在）${RESET}"
+      fi
+    done
+
+    for entry in "${TARGET_HOSTS[@]}"; do
+      IFS='|' read -r name skills_dir <<< "$entry"
+      check_host "$name" "$skills_dir"
+    done
+
+    echo ""
+    check_python_pptx
+    echo ""
+    exit 0
+    ;;
+
+  # ── UNINSTALL ──────────────────────────────────────────────────────────────
+  uninstall)
+    header "卸载 pptdog skills"
+    warn "即将删除以下主机的 pptdog-* 符号链接（~/.pptdog/ 数据目录保留）："
+    for entry in "${TARGET_HOSTS[@]}"; do
+      IFS='|' read -r name skills_dir <<< "$entry"
+      echo -e "  ${YELLOW}$name${RESET}  →  $skills_dir"
+    done
+    echo ""
+
+    if ! confirm "确认卸载？" "N"; then
+      info "已取消"
+      exit 0
+    fi
+
+    for entry in "${TARGET_HOSTS[@]}"; do
+      IFS='|' read -r name skills_dir <<< "$entry"
+      uninstall_for_host "$name" "$skills_dir"
+    done
+
+    echo ""
+    success "卸载完成。数据目录 ~/.pptdog/ 已保留。"
+    echo ""
+    exit 0
+    ;;
+
+  # ── INSTALL ────────────────────────────────────────────────────────────────
+  install)
+    # 1. 初始化数据目录
+    init_data_dir
+
+    # 2. 安装 skills
+    header "安装 pptdog skills"
+
+    local_skills=()
+    mapfile -t local_skills < <(list_skills)
+
+    if [[ ${#local_skills[@]} -eq 0 ]]; then
+      error "在 $PPTDOG_SKILLS_DIR 中未找到任何 skill 目录"
+      exit 1
+    fi
+
+    info "找到 ${#local_skills[@]} 个 skills：${local_skills[*]}"
+    echo ""
+
+    declare -a success_hosts=()
+    for entry in "${TARGET_HOSTS[@]}"; do
+      IFS='|' read -r name skills_dir <<< "$entry"
+      echo -e "  ${BOLD}→ $name${RESET}  ${DIM}($skills_dir)${RESET}"
+      install_for_host "$name" "$skills_dir"
+      success_hosts+=("$name")
+      echo ""
+    done
+
+    # 3. 检查 python-pptx
+    check_python_pptx
+
+    # 4. 打印完成摘要
+    print_summary "${success_hosts[@]}"
+    ;;
+
+esac
