@@ -35,6 +35,7 @@ PPTDOG_SKILLS_DIR="$PPTDOG_DIR/skills"
 # 主机定义：name|check_cmd|skills_dir
 declare -a HOST_DEFS=(
   "claude-code|claude|$HOME/.claude/skills"
+  "codebuddy|codebuddy|$HOME/.codebuddy/skills"
   "openclaw|openclaw|$HOME/.openclaw/skills"
   "codex|codex|$HOME/.codex/skills"
   "cursor|cursor|$HOME/.cursor/skills"
@@ -80,6 +81,7 @@ while [[ $# -gt 0 ]]; do
       echo ""
       echo "支持的主机："
       echo "  claude-code   Claude Code CLI  → ~/.claude/skills/pptdog-*/"
+      echo "  codebuddy     CodeBuddy        → ~/.codebuddy/skills/pptdog-*/"
       echo "  openclaw      OpenClaw         → ~/.openclaw/skills/pptdog-*/"
       echo "  codex         Codex CLI        → ~/.codex/skills/pptdog-*/"
       echo "  cursor        Cursor           → ~/.cursor/skills/pptdog-*/"
@@ -195,7 +197,8 @@ install_for_host() {
   mkdir -p "$skills_base"
 
   local skills
-  mapfile -t skills < <(list_skills)
+  skills=()
+  while IFS= read -r _item; do skills+=("$_item"); done < <(list_skills)
 
   if [[ ${#skills[@]} -eq 0 ]]; then
     warn "未找到任何 skill，跳过 $host_name"
@@ -258,7 +261,8 @@ check_host() {
   echo -e "\n  ${BOLD}$host_name${RESET}  ${DIM}→ $skills_base${RESET}"
 
   local skills
-  mapfile -t skills < <(list_skills)
+  skills=()
+  while IFS= read -r _item; do skills+=("$_item"); done < <(list_skills)
 
   for skill in "${skills[@]}"; do
     local link_name="pptdog-$skill"
@@ -311,7 +315,8 @@ print_summary() {
 
   echo -e "${BOLD}可用的 skill 命令：${RESET}"
   local skills
-  mapfile -t skills < <(list_skills)
+  skills=()
+  while IFS= read -r _item; do skills+=("$_item"); done < <(list_skills)
   for skill in "${skills[@]}"; do
     echo -e "  ${CYAN}/${skill}${RESET}"
   done
@@ -354,7 +359,7 @@ if [[ -n "$SPECIFIC_HOST" ]]; then
   done
   if [[ "$found" == false ]]; then
     error "未知主机：$SPECIFIC_HOST"
-    echo "  支持的主机：claude-code, openclaw, codex, cursor"
+    echo "  支持的主机：claude-code, codebuddy, openclaw, codex, cursor"
     exit 1
   fi
 else
@@ -454,7 +459,8 @@ case "$MODE" in
     header "安装 pptdog skills"
 
     local_skills=()
-    mapfile -t local_skills < <(list_skills)
+    local_skills=()
+  while IFS= read -r _item; do local_skills+=("$_item"); done < <(list_skills)
 
     if [[ ${#local_skills[@]} -eq 0 ]]; then
       error "在 $PPTDOG_SKILLS_DIR 中未找到任何 skill 目录"
