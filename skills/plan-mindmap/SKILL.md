@@ -38,16 +38,28 @@ voice-triggers: ["帮我做大纲", "帮我想结构", "帮我设计思维导图
 ### 1. 定位项目
 
 ```bash
-# 若用户指定了 slug，直接使用；否则列出现有项目让用户选择
-ls ~/.pptdog/projects/ 2>/dev/null || echo "NO_PROJECTS"
-```
+# 确认项目 slug
+_PROJECTS_DIR="$HOME/.pptdog/projects"
+_SLUG_COUNT=$(ls "$_PROJECTS_DIR" 2>/dev/null | wc -l | tr -d ' ')
 
-若存在多个项目，列出并询问：「这次针对哪个项目？」
+if [ "$_SLUG_COUNT" -eq 0 ]; then
+  echo "⛔ 暂无项目，请先运行 /ppt-hours 新建项目"
+  exit 1
+elif [ "$_SLUG_COUNT" -eq 1 ]; then
+  SLUG=$(ls "$_PROJECTS_DIR")
+  echo "📁 自动选择唯一项目：$SLUG"
+else
+  echo "📂 检测到多个项目，请选择："
+  ls -t "$_PROJECTS_DIR" | nl -ba   # 按修改时间倒序，最近优先
+  echo ""
+  echo "（直接回车选最近的项目，或输入编号）"
+fi
+```
 
 ### 2. 读取 ppt-hours.md
 
 ```bash
-cat ~/.pptdog/projects/<slug>/ppt-hours.md 2>/dev/null || echo "NOT_FOUND"
+cat ~/.pptdog/projects/$SLUG/ppt-hours.md 2>/dev/null || echo "NOT_FOUND"
 ```
 
 **若文件存在**，提取并展示摘要：
@@ -513,7 +525,7 @@ D. 确认，进入下一步（/plan-details）
 用户确认后，写入思维导图文件：
 
 ```bash
-cat > ~/.pptdog/projects/<slug>/mindmap.md << 'EOF'
+cat > ~/.pptdog/projects/$SLUG/mindmap.md << 'EOF'
 # [一句话主题] — 思维导图
 生成时间：<ISO 时间>
 结构方案：[方案A/B/C] — [方案名称]

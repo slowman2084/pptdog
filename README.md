@@ -50,8 +50,8 @@ pptdog 的每一步都在逼你做这件事：
 │  └── 输出：details.md（论点 + 素材 + 演讲者思路）                               │
 │          │                                                                   │
 │          ▼                                                                   │
-│  /slide-writer                                                               │
-│  ├── 把 details.md 转化为 PPT 页面级的内容稿（每页标题 + 正文 + 备注）            │
+│  /slide-content-and-scripts                                                  │
+│  ├── 把 details.md 转化为每页 Slide 内容规划 + 演讲口头说（含开门关门/图片引用）  │
 │  └── 输出：slide-content.md（完整内容稿，格式化为逐页结构）                       │
 │          │                                                                   │
 │          ▼                                                                   │
@@ -77,7 +77,7 @@ pptdog 的每一步都在逼你做这件事：
 | PPT Hours | `/ppt-hours` | 演讲前的战略思考：搞清楚听众、主题和断舍离边界 |
 | Plan Mindmap | `/plan-mindmap` | 提供 2-3 个结构方案，讲者选一个作为整个分享的骨架 |
 | Plan Details | `/plan-details` | 逐论点挖掘血肉：证据、案例、故事、深度自检 |
-| Slide Writer | `/slide-writer` | 把内容转化为页面级内容稿（每页标题+正文+演讲备注） |
+| Slide Content and Scripts | `/slide-content-and-scripts` | 把 details.md 转化为每页 Slide 内容规划 + 演讲口头说，包含开门关门、小开关门、图片引用 |
 | PPT Review | `/ppt-review` | 生成前最后一道关：AI 扮演最挑剔的听众，三层九项打分 |
 | Gen Slides | `/gen-slides` | 把内容稿转为真正的 .pptx 文件，内容是输入，格式是输出 |
 
@@ -98,7 +98,7 @@ pptdog 的每一步都在逼你做这件事：
 3. 运行 /plan-details
    → AI 逐论点帮你挖素材、找案例
 
-4. 运行 /slide-writer
+4. 运行 /slide-content-and-scripts
    → 内容稿出炉
 
 5. 运行 /ppt-review
@@ -151,7 +151,7 @@ pptdog 的每一步都在逼你做这件事：
         ├── ppt-hours.md         # 听众画像 + 一句话主题（/ppt-hours 输出）
         ├── mindmap.md           # 分享骨架/大纲（/plan-mindmap 输出）
         ├── details.md           # 论点血肉（/plan-details 输出）
-        ├── slide-content.md     # 完整内容稿，逐页结构（/slide-writer 输出）
+        ├── slide-content.md     # 完整内容稿，逐页结构（/slide-content-and-scripts 输出）
         ├── review.md            # 内容评审报告（/ppt-review 输出）
         ├── timeline.jsonl       # 项目事件时间线（各 Skill 追加写入）
         ├── learnings.jsonl      # 项目级 learnings（可选，优先写全局）
@@ -232,3 +232,4 @@ A：可以。在 `/gen-slides` Step 1 选「使用我的公司模板」，提供
 
 **Q：learnings 是什么？有什么用？**  
 A：learnings 是跨会话的历史踩坑记录。每次评审发现的问题都会追加写入，下次运行 Skill 时会自动加载，提醒你「上次在这种场景下踩过这个坑」。随着使用次数增加，AI 会越来越了解你的演讲习惯。
+�惯。

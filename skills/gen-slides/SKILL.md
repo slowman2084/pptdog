@@ -38,10 +38,25 @@ voice-triggers: ["帮我生成PPT", "帮我导出幻灯片", "帮我做成文件
 ### 1. 确认项目 slug
 
 ```bash
-ls ~/.pptdog/projects/ 2>/dev/null || echo "NO_PROJECTS"
+# 确认项目 slug
+_PROJECTS_DIR="$HOME/.pptdog/projects"
+_SLUG_COUNT=$(ls "$_PROJECTS_DIR" 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$_SLUG_COUNT" -eq 0 ]; then
+  echo "⛔ 暂无项目，请先运行 /ppt-hours 新建项目"
+  exit 1
+elif [ "$_SLUG_COUNT" -eq 1 ]; then
+  SLUG=$(ls "$_PROJECTS_DIR")
+  echo "📁 自动选择唯一项目：$SLUG"
+else
+  echo "📂 检测到多个项目，请选择："
+  ls -t "$_PROJECTS_DIR" | nl -ba   # 按修改时间倒序，最近优先
+  echo ""
+  echo "（直接回车选最近的项目，或输入编号）"
+fi
 ```
 
-列出已有项目让用户选择，或直接使用命令中传入的 slug。
+若 slug 已在命令中传入，直接使用（跳过上方检测，直接 `SLUG=<传入值>`）。
 
 打印当前项目状态：
 
@@ -62,7 +77,7 @@ ls ~/.pptdog/projects/ 2>/dev/null || echo "NO_PROJECTS"
 ### 2. 评审通过验证（非阻塞）
 
 ```bash
-cat ~/.pptdog/projects/<slug>/review.md 2>/dev/null | grep "综合均分"
+cat ~/.pptdog/projects/$SLUG/review.md 2>/dev/null | grep "综合均分"
 ```
 
 - **review.md 存在且综合均分 ≥ 7** → ✅ 内容已通过评审，继续
@@ -82,7 +97,7 @@ C. 直接生成，跳过所有提醒
 ### 3. 读取 slide-content.md
 
 ```bash
-cat ~/.pptdog/projects/<slug>/slide-content.md
+cat ~/.pptdog/projects/$SLUG/slide-content.md
 ```
 
 解析提取：
@@ -102,7 +117,7 @@ cat ~/.pptdog/projects/<slug>/slide-content.md
 ls ~/.pptdog/templates/*.pptx 2>/dev/null && echo "TEMPLATE_FOUND" || echo "NO_TEMPLATE"
 
 # 检测用户项目级模板（若有）
-ls ~/.pptdog/projects/<slug>/template.pptx 2>/dev/null && echo "PROJECT_TEMPLATE_FOUND" || true
+ls ~/.pptdog/projects/$SLUG/template.pptx 2>/dev/null && echo "PROJECT_TEMPLATE_FOUND" || true
 
 # 检测常见公司模板路径
 for p in \
@@ -366,7 +381,7 @@ paginate: true
 - 任何项目初始化步骤
 
 将适配后的内容作为输入传入，按 pptx skill 的指令生成 .pptx 文件。
-输出路径指定为：~/.pptdog/projects/<slug>/slides/deck.pptx
+输出路径指定为：~/.pptdog/projects/$SLUG/slides/deck.pptx
 ```
 
 > ⚠️ **如果 pptx skill 未安装**：提示用户在当前 IDE 中安装 pptx skill，然后重新运行 /gen-slides。

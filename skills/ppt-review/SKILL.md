@@ -43,11 +43,25 @@ voice-triggers: ["帮我评审PPT", "帮我检查内容", "帮我看看这个演
 ### 1. 确认项目 slug
 
 ```bash
-ls ~/.pptdog/projects/ 2>/dev/null || echo "NO_PROJECTS"
+# 确认项目 slug
+_PROJECTS_DIR="$HOME/.pptdog/projects"
+_SLUG_COUNT=$(ls "$_PROJECTS_DIR" 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$_SLUG_COUNT" -eq 0 ]; then
+  echo "⛔ 暂无项目，请先运行 /ppt-hours 新建项目"
+  exit 1
+elif [ "$_SLUG_COUNT" -eq 1 ]; then
+  SLUG=$(ls "$_PROJECTS_DIR")
+  echo "📁 自动选择唯一项目：$SLUG"
+else
+  echo "📂 检测到多个项目，请选择："
+  ls -t "$_PROJECTS_DIR" | nl -ba   # 按修改时间倒序，最近优先
+  echo ""
+  echo "（直接回车选最近的项目，或输入编号）"
+fi
 ```
 
-- 若 slug 已在命令中传入，直接使用。
-- 否则列出所有项目让用户选择。
+- 若 slug 已在命令中传入，直接使用（跳过上方检测，直接 `SLUG=<传入值>`）。
 - 确认后打印当前项目状态：
 
 ```
@@ -67,7 +81,7 @@ ls ~/.pptdog/projects/ 2>/dev/null || echo "NO_PROJECTS"
 ### 2. 读取 slide-content.md
 
 ```bash
-cat ~/.pptdog/projects/<slug>/slide-content.md
+cat ~/.pptdog/projects/$SLUG/slide-content.md
 ```
 
 解析页面结构，提取：
@@ -286,8 +300,8 @@ D. 先看其他问题的详细说明，再决定
 评审完成后，自动写入 review.md：
 
 ```bash
-cat > ~/.pptdog/projects/<slug>/review.md << 'EOF'
-# PPT Review — <slug>
+cat > ~/.pptdog/projects/$SLUG/review.md << 'EOF'
+# PPT Review — $SLUG
 评审时间：<ISO 时间>
 评审版本：slide-content.md（MD5 或最后修改时间）
 
@@ -350,6 +364,49 @@ learnings 写入触发条件：
 | 汇报型：成果写成了事情 | `pitfall` | `outcome-vs-activity` |
 | 痛点没有数字化 | `pitfall` | `pain-not-quantified` |
 | 用户修正了 AI 的评分判断 | `correction` | `user-corrected-score-layer2` |
+
+---
+
+## 修改后复查
+
+> 用户改完 slide-content.md 之后，可以随时回来运行 `/ppt-review` 触发复查。
+> 复查时，AI 会对比本次得分和上次 review.md 中的历史得分，告诉你：
+> - 哪些问题已修复（✅）
+> - 哪些还没改到（⚠️）
+> - 总分变化（+X 分 / -X 分）
+
+**复查触发逻辑：**
+
+```bash
+# 检查是否存在已有 review.md
+_REVIEW_FILE="$HOME/.pptdog/projects/$SLUG/review.md"
+if [ -f "$_REVIEW_FILE" ]; then
+  # 提取上次综合均分
+  _LAST_SCORE=$(grep "综合均分\|总分" "$_REVIEW_FILE" | tail -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+  echo "📋 检测到上次评审记录，综合均分：${_LAST_SCORE:-未知}"
+  echo "本次为复查模式，将对比上次结果"
+fi
+```
+
+若检测到已有 review.md，AI 在评审完成后额外输出对比表：
+
+```
+## 📊 本次 vs 上次对比
+
+| 评审项         | 上次 | 本次 | 变化   |
+|--------------|------|------|--------|
+| ①内容精准度   | 6    | 8    | ✅ +2  |
+| ②听众匹配度   | 7    | 7    | — 持平 |
+| ③空姐效应     | 5    | 8    | ✅ +3  |
+| ...           | ...  | ...  | ...    |
+| **综合均分**  | 6.2  | 7.5  | ✅ +1.3 |
+```
+
+若综合均分首次达到 7.0+：
+> 🎉 通过评审门槛！可以进入 `/gen-slides` 了。
+
+若仍未达到 7.0：
+> ⚠️ 综合均分 X.X，还差 Y 分到门槛。以下是当前最需要改的 Top 3：
 
 ---
 

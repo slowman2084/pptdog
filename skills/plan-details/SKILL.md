@@ -36,27 +36,40 @@ voice-triggers: ["帮我填充内容", "帮我想每页说什么", "帮我补充
 > **AI 必须先执行此段，再进行任何交互。**
 
 ```bash
-# 1. 确定项目 slug（从当前会话上下文或询问用户）
-# 若 ~/.pptdog/projects/ 下只有一个目录，自动选择；否则列出让用户选择
-ls ~/.pptdog/projects/ 2>/dev/null || echo "(暂无项目)"
+# 确认项目 slug
+_PROJECTS_DIR="$HOME/.pptdog/projects"
+_SLUG_COUNT=$(ls "$_PROJECTS_DIR" 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$_SLUG_COUNT" -eq 0 ]; then
+  echo "⛔ 暂无项目，请先运行 /ppt-hours 新建项目"
+  exit 1
+elif [ "$_SLUG_COUNT" -eq 1 ]; then
+  SLUG=$(ls "$_PROJECTS_DIR")
+  echo "📁 自动选择唯一项目：$SLUG"
+else
+  echo "📂 检测到多个项目，请选择："
+  ls -t "$_PROJECTS_DIR" | nl -ba   # 按修改时间倒序，最近优先
+  echo ""
+  echo "（直接回车选最近的项目，或输入编号）"
+fi
 
 # 2. 读取骨架
-_MINDMAP="~/.pptdog/projects/<slug>/mindmap.md"
+_MINDMAP="~/.pptdog/projects/$SLUG/mindmap.md"
 cat "$_MINDMAP" 2>/dev/null || echo "⚠️  未找到 mindmap.md，请先运行 /plan-mindmap"
 
 # 3. 读取演讲设定（类型、时长、听众）
-_HOURS_FILE="~/.pptdog/projects/<slug>/ppt-hours.json"
+_HOURS_FILE="~/.pptdog/projects/$SLUG/ppt-hours.json"
 cat "$_HOURS_FILE" 2>/dev/null || echo "(ppt-hours.json 不存在，将按分享型流程进行)"
 
 # 4. 加载 learnings（若存在）
-_LEARNINGS="~/.pptdog/projects/<slug>/learnings.jsonl"
+_LEARNINGS="~/.pptdog/projects/$SLUG/learnings.jsonl"
 if [ -f "$_LEARNINGS" ]; then
   echo "=== 历史经验（最近3条）==="
   tail -3 "$_LEARNINGS"
 fi
 
 # 5. 扫描 references/ 目录
-REFS_DIR="$HOME/.pptdog/projects/<slug>/references"
+REFS_DIR="$HOME/.pptdog/projects/$SLUG/references"
 if [ -d "$REFS_DIR" ]; then
   echo "=== references/ 目录内容 ==="
   ls -la "$REFS_DIR" 2>/dev/null | grep -E "\.(png|jpg|jpeg|webp|gif|svg)$" \
@@ -314,6 +327,44 @@ D. 自定义：我有另一种展开方式（描述给 AI）
 ```
 
 追问：你能把「{论点描述的痛点}」用一个数字来表达吗？
+
+### 3-B+：成果真实性——引导截图进 references/
+
+> 方法论提醒：夸张的数字（如可用性 100%、零缺陷）评委会怀疑真实性。
+> 最有力的证明：监控截图 + 人证（客户/业务方认可截图）
+
+**AI 提问：**
+> 你描述的这个成果「{成果描述}」，有没有可以截图的证明？
+
+**Qd-4：成果证明材料，你有哪些？**
+
+```
+A. 有监控看板截图 / 数据大盘截图              ← 最有说服力
+B. 有业务方或客户的认可（截图/文字/邮件）
+C. A + B 都有（双重证明）                    ← 推荐（最可信）
+D. 暂时没有，但可以去找
+E. 这个成果不需要额外证明（说明理由）
+```
+
+> 💡 评委看到监控截图的那一刻，质疑会直接消失。10分钟找一张截图，比口头解释30分钟有效。
+
+**若选 A / B / C：**
+> 「请把截图保存到 `~/.pptdog/projects/<slug>/references/` 目录下。
+> 建议命名：`monitor-[描述]-[论点编号].png` 或 `proof-[描述]-[论点编号].png`
+> 保存后告诉我文件名，我会记录到这个论点的 details.md 里。」
+
+收到文件名后，在该论点的「参考图片」字段里记录：
+```markdown
+**参考图片：**
+- `![监控截图](references/monitor-xxx.png)` — 证明成果真实性（SLO = 99.99%，截至XXXX年）
+```
+
+**若选 D：**
+> 「建议在演讲前找到这张截图——没有图的数字在汇报中说服力打六折。
+> 我在 details.md 里记录一个待办：`⚠️ 待补充：成果证明截图`，你准备好后回来更新。」
+
+**若选 E：**
+> 「好，说明一下为什么不需要额外证明？（AI 记录到 details.md 备注中）」
 
 ### 3-C："自己"的举证
 
