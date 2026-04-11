@@ -1,7 +1,7 @@
 ---
 name: gen-slides
 displayName: Gen Slides — 把内容稿转化为真正的 PPT
-version: 1.1.0
+version: 1.2.0
 trigger: /gen-slides
 description: >
   内容已确认，这一步把 slide-content.md 转化为真正的演示文稿文件。
@@ -93,22 +93,41 @@ cat ~/.pptdog/projects/<slug>/slide-content.md
 
 ## Step 1：扫描可用的生成 Backend
 
-> AI 主动检测当前 IDE/环境中安装了哪些 PPT/Slide 生成 skill 或工具。
+> AI 主动检测当前 IDE/环境中安装了哪些 PPT/Slide 生成 skill 或工具，**同时检测是否存在 .pptx 模板文件**——有模板时推荐策略会调整。
 
-### 1-A：内置 Skill 扫描
+### 1-A：模板文件检测（优先）
 
-AI 检查以下路径，确认哪些 skill 已安装（按优先级顺序）：
+```bash
+# 检测 pptdog 模板目录
+ls ~/.pptdog/templates/*.pptx 2>/dev/null && echo "TEMPLATE_FOUND" || echo "NO_TEMPLATE"
+
+# 检测用户项目级模板（若有）
+ls ~/.pptdog/projects/<slug>/template.pptx 2>/dev/null && echo "PROJECT_TEMPLATE_FOUND" || true
+
+# 检测常见公司模板路径
+for p in \
+  ~/Desktop/*.pptx \
+  ~/Documents/templates/*.pptx \
+  ~/Downloads/*.pptx; do
+  ls "$p" 2>/dev/null && echo "USER_TEMPLATE: $p"
+done | head -5
+```
+
+AI 根据检测结果设置 `HAS_TEMPLATE` 标志，影响后续推荐逻辑：
+- 检测到 `.pptx` 模板 → `HAS_TEMPLATE=true`，记录模板路径
+- 未检测到 → `HAS_TEMPLATE=false`，使用默认配色
+
+### 1-B：内置 Skill 和工具扫描
 
 ```bash
 # 检查常见 skill 安装路径（Claude Code / Codex / OpenClaw / CodeBuddy / Cursor）
 for skill_dir in \
   ~/.claude/skills/pptx \
-  ~/.claude/skills/docx \
   ~/.codex/skills/pptx \
   ~/.openclaw/skills/pptx \
   ~/.codebuddy/skills/pptx \
   ~/.cursor/skills/pptx; do
-  [ -d "$skill_dir" ] && echo "FOUND: $skill_dir"
+  [ -d "$skill_dir" ] && echo "FOUND_SKILL: $skill_dir"
 done
 
 # 检查 Marp CLI（Markdown → PPTX/PDF/HTML）
@@ -124,49 +143,66 @@ command -v libreoffice 2>/dev/null && echo "FOUND: libreoffice"
 command -v soffice 2>/dev/null && echo "FOUND: libreoffice (soffice)"
 ```
 
-### 1-B：汇总可用 Backend
+### 1-C：汇总可用 Backend（动态推荐逻辑）
 
-AI 根据扫描结果，动态构建可用列表：
+AI 根据 `HAS_TEMPLATE` + 已安装工具，动态决定推荐项：
+
+**当 `HAS_TEMPLATE=true`（检测到 .pptx 模板）：**
+
+```
+🎨 检测到 PPT 模板：[模板路径]
+
+🔍 可用的 PPT 生成工具：
+
+  A. pptx skill + 模板   ✅ 已安装   ← 强烈推荐（原生支持 .pptx 模板）
+     基于你的 [模板名] 生成，保留母版/配色/字体
+  B. python-pptx + 模板  ✅ 已安装   ← 次选（支持模板，样式控制更灵活）
+     用 python-pptx 载入模板并填充内容
+  C. Marp               ✅ 已安装    （不支持 .pptx 模板，使用 Marp 主题）
+  D. 仅导出 Markdown     ✅ 始终可用  （手动导入并套模板）
+  E. 自定义：我有其他工具
+
+  ⚠️ 注意：C、D 不能使用你的 .pptx 模板。
+```
+
+**当 `HAS_TEMPLATE=false`（无模板）：**
 
 ```
 🔍 检测到以下可用的 PPT 生成工具：
 
-  A. pptx skill（~/.xxx/skills/pptx）         ✅ 已安装   ← 推荐
-  B. python-pptx（直接脚本生成）               ✅ 已安装
-  C. Marp（Markdown → PPTX/PDF/HTML）         ✅ 已安装
-  D. LibreOffice（.odp 格式，兜底）            ✅ 已安装
-  E. 仅导出 Markdown（不生成二进制文件）        ✅ 始终可用
+  A. pptx skill         ✅ 已安装   ← 推荐（标准 .pptx，可在 PPT/Keynote/WPS 打开）
+  B. python-pptx        ✅ 已安装   （样式较简单，速度快）
+  C. Marp               ✅ 已安装   （技术演讲首选，主题丰富）
+  D. 仅导出 Markdown     ✅ 始终可用 （导入 Gamma / Google Slides / Canva）
+  E. 自定义：我有其他工具
 
-  未检测到：reveal.js（需要 Node.js 环境）
+  💡 没有公司模板？可以放一个 .pptx 模板到 ~/.pptdog/templates/，
+     下次会自动检测并优先推荐基于模板的生成方式。
 ```
 
 若没有检测到任何工具（极端情况）：
 
 ```
 ⚠️ 未检测到任何 PPT 生成工具。
-   推荐安装 pptx skill：在 Claude Code 中运行 /pptx
-   或直接使用「仅导出 Markdown」选项（E），手动转换。
+   推荐安装 pptx skill：在 Claude Code 中运行 /pptx 安装
+   或直接使用「仅导出 Markdown」选项（D），手动转换。
 ```
 
-**Qg-1：选择生成 Backend**（动态展示检测到的选项）
+---
 
-```
-A. pptx skill — 调用内置 pptx skill，生成标准 .pptx 文件     ← 默认推荐
-   输出：deck.pptx，可在 PowerPoint / Keynote / WPS 打开
-B. python-pptx — AI 生成并运行 Python 脚本，直接写出 .pptx
-   输出：deck.pptx，样式较简单，速度快
-C. Marp — Markdown 驱动，主题丰富，适合技术演讲
-   输出：deck.html / deck.pdf / deck.pptx（可选）
-D. 仅导出 Markdown — 不生成二进制文件，输出结构化 .md
-   适合：后续手动导入 Google Slides / Canva / Gamma 等
-E. 自定义：我有其他工具（告诉 AI）
-```
+**Qg-1：选择生成 Backend**（AI 动态展示上方结果，标注推荐）
 
-> 💡 **如何选择：**
-> - 需要在 PowerPoint/WPS 里精细调整 → A（pptx skill）
-> - 快速出稿，不在意样式 → B（python-pptx）
-> - 技术分享，代码多，喜欢 Markdown → C（Marp）
-> - 最终要导入 Gamma / Beautiful.ai 等工具 → D（Markdown）
+> 💡 **有模板时的选择逻辑：**
+> - 想完整保留公司视觉规范（颜色/字体/母版）→ **A（pptx skill + 模板）**，最还原
+> - 想自定义样式细节超出模板限制 → **B（python-pptx + 模板）**，代码可精细控制
+> - 不在乎视觉，技术分享为主 → **C（Marp）**，内容优先
+> - 后续要在其他设计工具里做视觉加工 → **D（Markdown）**，最干净
+>
+> 💡 **无模板时的选择逻辑：**
+> - 需要在 PowerPoint/WPS 里精细调整 → **A（pptx skill）**
+> - 快速出稿，不在意样式 → **B（python-pptx）**
+> - 技术分享，代码多，喜欢 Markdown → **C（Marp）**
+> - 最终要导入 Gamma / Beautiful.ai 等工具 → **D（Markdown）**
 
 ---
 
@@ -176,10 +212,11 @@ E. 自定义：我有其他工具（告诉 AI）
 
 ### 适配 A：pptx skill 格式
 
-将 slide-content.md 转换为 pptx skill 接受的输入格式：
+将 slide-content.md 转换为 pptx skill 接受的输入格式，**并传入模板路径（若 HAS_TEMPLATE=true）**：
 
 ```markdown
 # [演讲标题]
+<!-- TEMPLATE: [模板路径，若 HAS_TEMPLATE=true；否则省略此行] -->
 
 ---
 ## [Slide 1 标题]
@@ -210,9 +247,13 @@ C. 我要手动调整某几页（告诉 AI 哪几页）
 
 ### 适配 B：python-pptx 格式
 
-AI 将 slide-content.md 解析为结构化 dict，直接内嵌到生成脚本：
+AI 将 slide-content.md 解析为结构化 dict，内嵌到生成脚本，**有模板时载入模板文件**：
 
 ```python
+# 有模板（HAS_TEMPLATE=true）：prs = Presentation(TEMPLATE_PATH)，复用母版/配色/字体
+# 无模板：prs = Presentation()，使用 pptdog 默认配色
+TEMPLATE_PATH = "[模板路径]"  # 或 None
+
 SLIDES = [
     {
         "title": "...",
@@ -445,5 +486,7 @@ COLORS = {
 触发条件 → type：
 - 某页正文被自动截断（> 25 字）→ `pitfall: dense-slide-content`
 - 所有标题均为论点型 → `insight: good-title-discipline`
+- 检测到模板 + 用户选了支持模板的 backend → `insight: template-used`
+- 检测到模板但用户选了不支持模板的 backend（C/D）→ `insight: template-ignored-by-user`
 - 用户选择了非默认 backend → `insight: user-preferred-backend-<name>`
 - pptx skill 未安装，用户选择了 python-pptx → `pitfall: pptx-skill-not-installed`
