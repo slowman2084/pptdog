@@ -80,9 +80,10 @@ cat ~/.pptdog/learnings.jsonl 2>/dev/null | tail -100
 
 ```bash
 mkdir -p ~/.pptdog/projects/<slug>
+mkdir -p ~/.pptdog/projects/<slug>/references
 ```
 
-打印确认：「✅ 项目目录已创建：`~/.pptdog/projects/<slug>/`」
+打印确认：「✅ 项目目录已创建：`~/.pptdog/projects/<slug>/`（含 references/ 子目录）」
 
 ### 4. 打印当前项目状态
 

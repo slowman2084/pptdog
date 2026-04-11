@@ -54,6 +54,16 @@ if [ -f "$_LEARNINGS" ]; then
   echo "=== 历史经验（最近3条）==="
   tail -3 "$_LEARNINGS"
 fi
+
+# 5. 扫描 references/ 目录
+REFS_DIR="$HOME/.pptdog/projects/<slug>/references"
+if [ -d "$REFS_DIR" ]; then
+  echo "=== references/ 目录内容 ==="
+  ls -la "$REFS_DIR" 2>/dev/null | grep -E "\.(png|jpg|jpeg|webp|gif|svg)$" \
+    || echo "(目录存在但暂无图片)"
+else
+  echo "references/ 目录不存在（可手动创建：mkdir -p $REFS_DIR）"
+fi
 ```
 
 **AI 打印当前状态：**
@@ -65,6 +75,7 @@ fi
 👥 听众：<听众描述>
 🎯 演讲类型：<分享型 | 汇报型>
 📝 已有 details.md：<是 / 否>
+🖼  references/ 图片：<N> 张（[列出文件名]）
 ```
 
 如果 mindmap.md 不存在，**立即停止**并提示：
@@ -196,6 +207,11 @@ AI 帮结构化为以下格式：
 
 **结果（Result）：**
 [量化数字 + 情景细节，听众能感受到"哦，真的解决了"]
+
+**参考图片：**
+[若 references/ 中有相关图片，AI 主动提示：「references/ 目录中有 [文件名]，这张图是否用于支撑这个案例？」]
+- 若是 → 在这里记录：`![描述](references/文件名)`
+- 若否 → 记录 `（暂无配图，如有相关截图可放入 references/ 目录）`
 ```
 
 然后做**空姐效应检查**：
@@ -367,6 +383,10 @@ D. 自定义：我有另一种展开方式（描述给 AI）
 
 **深度笔记：**
 <自检过程中补充的 Why、推导逻辑、授人以渔要点>
+
+**参考图片：**
+- `![描述](references/文件名)` — [说明这张图用在哪、证明什么]
+- （无图时写：暂无配图）
 
 **汇报型补充：**（仅汇报型）
 - 成果表述：...
