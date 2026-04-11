@@ -1,7 +1,7 @@
 ---
 name: gen-slides
 displayName: Gen Slides — 把内容稿转化为真正的 PPT
-version: 1.2.0
+version: 1.3.0
 trigger: /gen-slides
 description: >
   内容已确认，这一步把 slide-content.md 转化为真正的演示文稿文件。
@@ -144,7 +144,56 @@ command -v soffice 2>/dev/null && echo "FOUND: libreoffice (soffice)"
 
 ### 1-C：汇总可用 Backend（动态推荐逻辑）
 
-AI 根据 `HAS_TEMPLATE` + 已安装工具，动态决定推荐项：
+AI 根据 `HAS_TEMPLATE` + 已安装工具 + **NanoBanana 是否安装**，动态决定推荐项。
+
+> **NanoBanana PPT Skills** 是专为 AI 代码编辑器（Claude Code / Cursor / Codex 等）设计的 PPT 生成 skill，支持通过参考图片指定视觉风格，生成效果更接近设计师水准。
+> 项目地址：https://github.com/op7418/NanoBanana-PPT-Skills
+
+**当 NanoBanana 已安装（最高优先级）：**
+
+```
+🎨 检测到 NanoBanana PPT Skills！
+
+  ⭐ NanoBanana PPT Skills（推荐）
+     → 专为 AI 代码编辑器设计，生成效果最接近设计师水准
+     → 支持通过参考图片指定视觉风格（例如：截一张你喜欢的 PPT 风格图）
+     → 配合 .pptx 模板使用效果更佳
+```
+
+若 NanoBanana 已安装，AI 额外提问：
+
+**Qg-style：是否提供参考图来指定视觉风格？**
+
+```
+A. 提供参考图（截一张你喜欢的 PPT 风格截图，或任意风格参考图）  ← 推荐
+   → AI 会基于参考图的配色、排版风格生成 PPT
+B. 使用 NanoBanana 默认风格，不指定参考图
+C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
+```
+
+> 💡 参考图不需要是 PPT 截图，任何你觉得"这个视觉风格我喜欢"的图片都可以——例如某个品牌的设计、某张海报、某个 APP 界面截图。NanoBanana 会分析其中的色彩、排版逻辑并迁移到你的 PPT 上。
+
+---
+
+**当 NanoBanana 未安装时，展示安装建议：**
+
+```
+💡 未检测到 NanoBanana PPT Skills（推荐安装）
+
+   NanoBanana 是专为 AI 代码编辑器设计的 PPT 生成 skill，支持通过
+   参考图片指定视觉风格，生成效果最接近设计师水准。
+
+   安装方式：https://github.com/op7418/NanoBanana-PPT-Skills
+   （在 Claude Code / Cursor / Codex 中按说明安装即可）
+
+   是否现在安装？
+   A. 是，我去安装，装完再回来继续
+   B. 否，先用当前可用的工具生成
+```
+
+---
+
+**完整 Backend 列表（有/无 NanoBanana 均显示，NanoBanana 排首位）：**
 
 **当 `HAS_TEMPLATE=true`（检测到 .pptx 模板）：**
 
@@ -153,37 +202,27 @@ AI 根据 `HAS_TEMPLATE` + 已安装工具，动态决定推荐项：
 
 🔍 可用的 PPT 生成工具：
 
-  A. [skill 名称]（如 pptx / pptx-generation / nanobanana-ppt-skills）
-                          ✅ 已安装   ← 强烈推荐（原生支持 .pptx 模板）
-     基于你的 [模板名] 生成，保留母版/配色/字体
-  B. python-pptx + 模板   ✅ 已安装   ← 次选（支持模板，样式控制更灵活）
-     用 python-pptx 载入模板并填充内容
-  C. Marp                 ✅ 已安装    （不支持 .pptx 模板，使用 Marp 主题）
-  D. 仅导出 Markdown       ✅ 始终可用  （手动导入并套模板）
-  E. 自定义：我有其他工具
+  A. NanoBanana PPT Skills ✅ 已安装   ← 强烈推荐（支持参考图风格 + .pptx 模板）
+  B. pptx / pptx-generation ✅ 已安装  （原生支持 .pptx 模板，保留母版/配色/字体）
+  C. python-pptx + 模板    ✅ 已安装   （模板支持，样式控制更灵活）
+  D. Marp                  ✅ 已安装   （不支持 .pptx 模板，使用 Marp 主题）
+  E. 仅导出 Markdown        ✅ 始终可用 （手动导入并套模板）
+  F. 自定义：我有其他工具
 
-  ⚠️ 注意：C、D 不能使用你的 .pptx 模板。
-```
-
-若检测到多个 PPT skill（如同时安装了 pptx 和 nanobanana-ppt-skills），A 选项展开列举，让用户选其中一个：
-
-```
-  A1. pptx                    ✅ 已安装   ← 推荐（更通用）
-  A2. pptx-generation         ✅ 已安装
-  A3. nanobanana-ppt-skills   ✅ 已安装
+  ⚠️ 注意：D、E 不能使用你的 .pptx 模板。
 ```
 
 **当 `HAS_TEMPLATE=false`（无模板）：**
 
 ```
-🔍 检测到以下可用的 PPT 生成工具：
+🔍 可用的 PPT 生成工具：
 
-  A. [skill 名称]（如 pptx / pptx-generation / nanobanana-ppt-skills）
-                          ✅ 已安装   ← 推荐（标准 .pptx，可在 PPT/Keynote/WPS 打开）
-  B. python-pptx          ✅ 已安装   （样式较简单，速度快）
-  C. Marp                 ✅ 已安装   （技术演讲首选，主题丰富）
-  D. 仅导出 Markdown       ✅ 始终可用 （导入 Gamma / Google Slides / Canva）
-  E. 自定义：我有其他工具
+  A. NanoBanana PPT Skills ✅ 已安装   ← 强烈推荐（参考图驱动风格，效果最好）
+  B. pptx / pptx-generation ✅ 已安装  ← 次选（标准 .pptx，可在 PPT/Keynote/WPS 打开）
+  C. python-pptx           ✅ 已安装   （样式较简单，速度快）
+  D. Marp                  ✅ 已安装   （技术演讲首选，主题丰富）
+  E. 仅导出 Markdown        ✅ 始终可用 （导入 Gamma / Google Slides / Canva）
+  F. 自定义：我有其他工具
 
   💡 没有公司模板？可以放一个 .pptx 模板到 ~/.pptdog/templates/，
      下次会自动检测并优先推荐基于模板的生成方式。
@@ -193,25 +232,20 @@ AI 根据 `HAS_TEMPLATE` + 已安装工具，动态决定推荐项：
 
 ```
 ⚠️ 未检测到任何 PPT 生成工具。
-   推荐安装 pptx skill：在 Claude Code 中运行 /pptx 安装
-   或直接使用「仅导出 Markdown」选项（D），手动转换。
+   首选推荐安装 NanoBanana PPT Skills：https://github.com/op7418/NanoBanana-PPT-Skills
+   或直接使用「仅导出 Markdown」选项（E），手动转换。
 ```
 
 ---
 
 **Qg-1：选择生成 Backend**（AI 动态展示上方结果，标注推荐）
 
-> 💡 **有模板时的选择逻辑：**
-> - 想完整保留公司视觉规范（颜色/字体/母版）→ **A（pptx skill + 模板）**，最还原
-> - 想自定义样式细节超出模板限制 → **B（python-pptx + 模板）**，代码可精细控制
-> - 不在乎视觉，技术分享为主 → **C（Marp）**，内容优先
-> - 后续要在其他设计工具里做视觉加工 → **D（Markdown）**，最干净
->
-> 💡 **无模板时的选择逻辑：**
-> - 需要在 PowerPoint/WPS 里精细调整 → **A（pptx skill）**
-> - 快速出稿，不在意样式 → **B（python-pptx）**
-> - 技术分享，代码多，喜欢 Markdown → **C（Marp）**
-> - 最终要导入 Gamma / Beautiful.ai 等工具 → **D（Markdown）**
+> 💡 **如何选择：**
+> - 想要最好看的视觉效果，可以指定风格参考图 → **A（NanoBanana）**
+> - 有公司 .pptx 模板，要完整保留视觉规范 → **B（pptx skill + 模板）**
+> - 快速出稿，不在意样式 → **C（python-pptx）**
+> - 技术分享，代码多，喜欢 Markdown 流 → **D（Marp）**
+> - 后续在 Gamma / Beautiful.ai 等工具做视觉加工 → **E（Markdown）**
 
 ---
 
@@ -497,5 +531,8 @@ COLORS = {
 - 所有标题均为论点型 → `insight: good-title-discipline`
 - 检测到模板 + 用户选了支持模板的 backend → `insight: template-used`
 - 检测到模板但用户选了不支持模板的 backend（C/D）→ `insight: template-ignored-by-user`
+- 用户选择了非默认 backend → `insight: user-preferred-backend-<name>`
+- pptx skill 未安装，用户选择了 python-pptx → `pitfall: pptx-skill-not-installed`
+alled`
 - 用户选择了非默认 backend → `insight: user-preferred-backend-<name>`
 - pptx skill 未安装，用户选择了 python-pptx → `pitfall: pptx-skill-not-installed`
