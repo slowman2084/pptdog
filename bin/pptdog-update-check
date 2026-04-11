@@ -19,7 +19,7 @@ CACHE_FILE="$STATE_DIR/last-update-check"
 MARKER_FILE="$STATE_DIR/just-upgraded-from"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
 VERSION_FILE="$PPTDOG_DIR/VERSION"
-REMOTE_URL="${PPTDOG_REMOTE_URL:-https://raw.githubusercontent.com/victorhuang/pptdog/main/VERSION}"
+REMOTE_URL="${PPTDOG_REMOTE_URL:-https://raw.githubusercontent.com/slowman2084/pptdog/main/VERSION}"
 
 # 强制刷新（供 /pptdog-upgrade 使用）
 if [[ "${1:-}" == "--force" ]]; then
