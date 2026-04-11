@@ -121,13 +121,12 @@ AI 根据检测结果设置 `HAS_TEMPLATE` 标志，影响后续推荐逻辑：
 
 ```bash
 # 检查常见 skill 安装路径（Claude Code / Codex / OpenClaw / CodeBuddy / Cursor）
-for skill_dir in \
-  ~/.claude/skills/pptx \
-  ~/.codex/skills/pptx \
-  ~/.openclaw/skills/pptx \
-  ~/.codebuddy/skills/pptx \
-  ~/.cursor/skills/pptx; do
-  [ -d "$skill_dir" ] && echo "FOUND_SKILL: $skill_dir"
+# 每个 IDE 目录 × 已知 skill 名称
+for base_dir in ~/.claude ~/.codex ~/.openclaw ~/.codebuddy ~/.cursor ~/.agents; do
+  for skill_name in pptx pptx-generation nanobanana-ppt-skills; do
+    skill_dir="$base_dir/skills/$skill_name"
+    [ -d "$skill_dir" ] && echo "FOUND_SKILL: $skill_dir ($skill_name)"
+  done
 done
 
 # 检查 Marp CLI（Markdown → PPTX/PDF/HTML）
@@ -154,15 +153,24 @@ AI 根据 `HAS_TEMPLATE` + 已安装工具，动态决定推荐项：
 
 🔍 可用的 PPT 生成工具：
 
-  A. pptx skill + 模板   ✅ 已安装   ← 强烈推荐（原生支持 .pptx 模板）
+  A. [skill 名称]（如 pptx / pptx-generation / nanobanana-ppt-skills）
+                          ✅ 已安装   ← 强烈推荐（原生支持 .pptx 模板）
      基于你的 [模板名] 生成，保留母版/配色/字体
-  B. python-pptx + 模板  ✅ 已安装   ← 次选（支持模板，样式控制更灵活）
+  B. python-pptx + 模板   ✅ 已安装   ← 次选（支持模板，样式控制更灵活）
      用 python-pptx 载入模板并填充内容
-  C. Marp               ✅ 已安装    （不支持 .pptx 模板，使用 Marp 主题）
-  D. 仅导出 Markdown     ✅ 始终可用  （手动导入并套模板）
+  C. Marp                 ✅ 已安装    （不支持 .pptx 模板，使用 Marp 主题）
+  D. 仅导出 Markdown       ✅ 始终可用  （手动导入并套模板）
   E. 自定义：我有其他工具
 
   ⚠️ 注意：C、D 不能使用你的 .pptx 模板。
+```
+
+若检测到多个 PPT skill（如同时安装了 pptx 和 nanobanana-ppt-skills），A 选项展开列举，让用户选其中一个：
+
+```
+  A1. pptx                    ✅ 已安装   ← 推荐（更通用）
+  A2. pptx-generation         ✅ 已安装
+  A3. nanobanana-ppt-skills   ✅ 已安装
 ```
 
 **当 `HAS_TEMPLATE=false`（无模板）：**
@@ -170,10 +178,11 @@ AI 根据 `HAS_TEMPLATE` + 已安装工具，动态决定推荐项：
 ```
 🔍 检测到以下可用的 PPT 生成工具：
 
-  A. pptx skill         ✅ 已安装   ← 推荐（标准 .pptx，可在 PPT/Keynote/WPS 打开）
-  B. python-pptx        ✅ 已安装   （样式较简单，速度快）
-  C. Marp               ✅ 已安装   （技术演讲首选，主题丰富）
-  D. 仅导出 Markdown     ✅ 始终可用 （导入 Gamma / Google Slides / Canva）
+  A. [skill 名称]（如 pptx / pptx-generation / nanobanana-ppt-skills）
+                          ✅ 已安装   ← 推荐（标准 .pptx，可在 PPT/Keynote/WPS 打开）
+  B. python-pptx          ✅ 已安装   （样式较简单，速度快）
+  C. Marp                 ✅ 已安装   （技术演讲首选，主题丰富）
+  D. 仅导出 Markdown       ✅ 始终可用 （导入 Gamma / Google Slides / Canva）
   E. 自定义：我有其他工具
 
   💡 没有公司模板？可以放一个 .pptx 模板到 ~/.pptdog/templates/，
