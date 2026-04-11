@@ -1,18 +1,18 @@
 ---
 name: gen-slides
 displayName: Gen Slides — 把内容稿转化为真正的 PPT
-version: 1.0.0
+version: 1.1.0
 trigger: /gen-slides
 description: >
-  内容已确认，这一步只做一件事：把 slide-content.md 转化为真正的 .pptx 文件。
-  内容是输入，格式是输出。自动执行内容规则检查（字数/标题/图示占位），
-  优先调用 pptx skill（python-pptx）生成文件。
-  - ppt-review
+  内容已确认，这一步把 slide-content.md 转化为真正的演示文稿文件。
+  核心逻辑：扫描当前环境支持的 PPT 生成 skill/工具，让用户选择 backend，
+  然后将 slide-content.md 适配转换后传给对应 skill 执行生成。
+  默认推荐内置 pptx skill（python-pptx，无需额外服务）。
 inputs:
   - ~/.pptdog/projects/<slug>/slide-content.md
   - ~/.pptdog/projects/<slug>/review.md           # 可选，用于通过门槛验证
 outputs:
-  - ~/.pptdog/projects/<slug>/slides/deck.pptx
+  - ~/.pptdog/projects/<slug>/slides/deck.pptx    # 或对应格式
 next-skill: null
 benefits-from: [slide-content-and-scripts, ppt-review]
 voice-triggers: ["帮我生成PPT", "帮我导出幻灯片", "帮我做成文件"]
@@ -32,7 +32,6 @@ voice-triggers: ["帮我生成PPT", "帮我导出幻灯片", "帮我做成文件
 ~/.pptdog/bin/pptdog-learnings-search --limit 3 --format pretty 2>/dev/null || true
 ```
 若输出 `UPGRADE_AVAILABLE <old> <new>`：提示用户「pptdog 有新版本，运行 `cd ~/.pptdog && git pull && bash setup` 可升级」，然后继续。
-
 
 > AI 在生成任何文件之前，必须完整执行本节。**不要跳过。**
 
@@ -57,7 +56,7 @@ ls ~/.pptdog/projects/ 2>/dev/null || echo "NO_PROJECTS"
 
 ```
 ⛔ 找不到 ~/.pptdog/projects/<slug>/slide-content.md
-   请先运行 /slide-writer 生成内容稿。
+   请先运行 /slide-content-and-scripts 生成内容稿。
 ```
 
 ### 2. 评审通过验证（非阻塞）
@@ -66,21 +65,19 @@ ls ~/.pptdog/projects/ 2>/dev/null || echo "NO_PROJECTS"
 cat ~/.pptdog/projects/<slug>/review.md 2>/dev/null | grep "综合均分"
 ```
 
-- **review.md 存在且综合均分 ≥ 7** → ✅ 内容已通过评审，继续执行
-- **review.md 存在但均分 < 7** → ⚠️ 警告但不阻塞：
+- **review.md 存在且综合均分 ≥ 7** → ✅ 内容已通过评审，继续
+- **review.md 存在但均分 < 7** → ⚠️ 警告提示（见下方 Qg-0）
+- **review.md 不存在** → 轻提醒（见下方 Qg-0）
+
+**Qg-0：内容尚未通过评审，是否继续生成？**（仅当均分 < 7 或无评审记录时展示）
 
 ```
-⚠️  注意：/ppt-review 评审未通过（综合均分 [X.X]/10）
-   建议先修改内容稿再生成 PPT，否则生成的是有缺陷的内容。
-   是否仍然继续生成？(y/N)
+A. 先去修改内容，改完再回来生成                  ← 推荐
+B. 我知道问题了，先生成看效果（风险自担）
+C. 直接生成，跳过所有提醒
 ```
 
-- **review.md 不存在** → 提醒但不阻塞：
-
-```
-💡 提示：未找到评审记录。建议先运行 /ppt-review 确认内容质量。
-   是否仍然继续生成？(y/N)
-```
+> 💡 均分 < 6 时强烈建议选 A；6-7 之间可以选 B；≥ 7 无需此提问。
 
 ### 3. 读取 slide-content.md
 
@@ -88,230 +85,320 @@ cat ~/.pptdog/projects/<slug>/review.md 2>/dev/null | grep "综合均分"
 cat ~/.pptdog/projects/<slug>/slide-content.md
 ```
 
-解析并提取：
-- 总页数
-- 每页：标题、正文文字量（字数）、是否有图示说明
-- 演讲者备注（若 slide-content.md 中有标注）
-
-### 4. 询问模板偏好
-
-> 模板决定视觉风格，不影响内容。
-
-```
-🎨 请选择 PPT 模板：
-
-  1. 使用 pptdog 默认模板（简洁商务风，深色标题 + 浅色内容区）
-  2. 使用我的公司模板（请提供 .pptx 模板文件路径）
-  3. 纯文字生成（无模板，使用 python-pptx 默认样式，快速出稿）
-
-请输入 1 / 2 / 3，或直接粘贴模板路径：
-```
-
-收到选择后继续执行 Step 1。
+解析提取：
+- 演讲类型、目标时长、总页数
+- 每页：标题、正文内容、演讲备注、图示说明
 
 ---
 
-## Step 1：模板选择与准备
+## Step 1：扫描可用的生成 Backend
 
-### 选项 1：pptdog 默认模板
+> AI 主动检测当前 IDE/环境中安装了哪些 PPT/Slide 生成 skill 或工具。
 
-```bash
-ls ~/.pptdog/templates/ 2>/dev/null || echo "NO_TEMPLATES"
-```
+### 1-A：内置 Skill 扫描
 
-- 若模板目录存在，列出可用模板（显示名称和描述）
-- 若不存在，提示：「默认模板未安装，将使用内置样式配置（风格接近默认模板）」
-- 继续执行 Step 2
-
-### 选项 2：用户公司模板
+AI 检查以下路径，确认哪些 skill 已安装（按优先级顺序）：
 
 ```bash
-# 验证用户提供的模板文件是否存在且为 .pptx 格式
-file <用户提供的路径>
+# 检查常见 skill 安装路径（Claude Code / Codex / OpenClaw / CodeBuddy / Cursor）
+for skill_dir in \
+  ~/.claude/skills/pptx \
+  ~/.claude/skills/docx \
+  ~/.codex/skills/pptx \
+  ~/.openclaw/skills/pptx \
+  ~/.codebuddy/skills/pptx \
+  ~/.cursor/skills/pptx; do
+  [ -d "$skill_dir" ] && echo "FOUND: $skill_dir"
+done
+
+# 检查 Marp CLI（Markdown → PPTX/PDF/HTML）
+command -v marp 2>/dev/null && echo "FOUND: marp"
+npx marp --version 2>/dev/null && echo "FOUND: marp (npx)"
+
+# 检查 python-pptx（python 直接生成）
+uv run python -c "import pptx; print('FOUND: python-pptx', pptx.__version__)" 2>/dev/null || true
+python3 -c "import pptx; print('FOUND: python-pptx', pptx.__version__)" 2>/dev/null || true
+
+# 检查 LibreOffice（导出兜底）
+command -v libreoffice 2>/dev/null && echo "FOUND: libreoffice"
+command -v soffice 2>/dev/null && echo "FOUND: libreoffice (soffice)"
 ```
 
-- 文件存在 → 提取模板的母版、配色、字体信息，用于后续生成
-- 文件不存在 → 请用户重新提供路径，或切换到选项 1
+### 1-B：汇总可用 Backend
 
-### 选项 3：纯文字生成
+AI 根据扫描结果，动态构建可用列表：
 
-直接使用 python-pptx 默认样式，跳过模板加载。
+```
+🔍 检测到以下可用的 PPT 生成工具：
+
+  A. pptx skill（~/.xxx/skills/pptx）         ✅ 已安装   ← 推荐
+  B. python-pptx（直接脚本生成）               ✅ 已安装
+  C. Marp（Markdown → PPTX/PDF/HTML）         ✅ 已安装
+  D. LibreOffice（.odp 格式，兜底）            ✅ 已安装
+  E. 仅导出 Markdown（不生成二进制文件）        ✅ 始终可用
+
+  未检测到：reveal.js（需要 Node.js 环境）
+```
+
+若没有检测到任何工具（极端情况）：
+
+```
+⚠️ 未检测到任何 PPT 生成工具。
+   推荐安装 pptx skill：在 Claude Code 中运行 /pptx
+   或直接使用「仅导出 Markdown」选项（E），手动转换。
+```
+
+**Qg-1：选择生成 Backend**（动态展示检测到的选项）
+
+```
+A. pptx skill — 调用内置 pptx skill，生成标准 .pptx 文件     ← 默认推荐
+   输出：deck.pptx，可在 PowerPoint / Keynote / WPS 打开
+B. python-pptx — AI 生成并运行 Python 脚本，直接写出 .pptx
+   输出：deck.pptx，样式较简单，速度快
+C. Marp — Markdown 驱动，主题丰富，适合技术演讲
+   输出：deck.html / deck.pdf / deck.pptx（可选）
+D. 仅导出 Markdown — 不生成二进制文件，输出结构化 .md
+   适合：后续手动导入 Google Slides / Canva / Gamma 等
+E. 自定义：我有其他工具（告诉 AI）
+```
+
+> 💡 **如何选择：**
+> - 需要在 PowerPoint/WPS 里精细调整 → A（pptx skill）
+> - 快速出稿，不在意样式 → B（python-pptx）
+> - 技术分享，代码多，喜欢 Markdown → C（Marp）
+> - 最终要导入 Gamma / Beautiful.ai 等工具 → D（Markdown）
 
 ---
 
-## Step 2：内容规则自动执行
+## Step 2：内容适配（根据 Backend 调整格式）
 
-> 在生成之前，对 slide-content.md 做规则扫描，自动报告问题（不阻塞生成，只出警告）。
+> 不同 backend 对内容的要求不同。AI 在调用 backend 前，先做格式适配。
 
-### 规则 2-A：正文字数检查
+### 适配 A：pptx skill 格式
 
-逐页统计正文字数（不含标题和备注）：
+将 slide-content.md 转换为 pptx skill 接受的输入格式：
 
-```
-📏 正文字数检查：
-  第 1 页「[标题]」：[X] 字 ✅
-  第 3 页「[标题]」：[X] 字 ⚠️ 超过 50 字（建议精简或拆页）
-  第 7 页「[标题]」：[X] 字 ⚠️ 超过 50 字
-```
+```markdown
+# [演讲标题]
 
-超过 50 字的页面，给出精简建议：
-- 是否可以拆成两页？
-- 正文能否变成 3 个 bullet，每条 ≤ 15 字？
-- 多余文字能否移入演讲者备注？
+---
+## [Slide 1 标题]
 
-### 规则 2-B：标题论点化检查
+[正文内容，每条 bullet ≤ 15 字，最多 5 条]
 
-对每页标题做论点判断（是观点还是话题）：
+> NOTES: [演讲者备注内容]
+> IMAGE: [图示说明，如有]
 
-```
-📌 标题检查：
-  ✅ 第 1 页：「三步构建零故障交付流水线」— 论点型 ✓
-  ⚠️ 第 4 页：「稳定性建设」— 话题型，缺少观点
-  ⚠️ 第 6 页：「发现了一个问题」— 废话型，宾语不具体
+---
+## [Slide 2 标题]
+...
 ```
 
-对话题型标题，提供 1 个论点化改写建议。
+**空姐效应最终过滤（生成前强制执行）：**
+- 若某页正文有完整句子（> 25 字），截取为关键词版本，原句移入 NOTES
+- 若某页正文 > 50 字，自动拆分为两页
 
-### 规则 2-C：图示占位框
-
-扫描 slide-content.md 中的图示说明（形如 `[图示：...]` 或 `[架构图：...]`）：
-
-```
-🖼️ 图示占位：
-  第 5 页：检测到「[架构图：三层微服务拓扑]」→ 将生成占位框
-  第 8 页：检测到「[流程图：发布流水线]」→ 将生成占位框
-```
-
-占位框在生成的 PPTX 中显示为：
-```
-┌─────────────────────────────────┐
-│  [图示：三层微服务拓扑]          │
-│  （请在 PowerPoint 中替换为实图）│
-└─────────────────────────────────┘
-```
-
-### 规则扫描汇总
+**Qg-2：确认内容适配结果**
 
 ```
-📋 规则扫描完成
-  ⚠️ [N] 个字数超标页面（已列出精简建议）
-  ⚠️ [N] 个标题为话题型（已列出改写建议）
-  🖼️ [N] 个图示将生成占位框
+A. 预览适配后的格式，确认后再生成
+B. 直接生成（信任 AI 的适配）                   ← 推荐
+C. 我要手动调整某几页（告诉 AI 哪几页）
+```
 
-👉 是否要先修改这些问题，还是直接生成（带上述警告）？(修改/直接生成)
+> 💡 首次使用建议选 A，确认 AI 没有误删重要内容；熟悉流程后选 B 更高效。
+
+### 适配 B：python-pptx 格式
+
+AI 将 slide-content.md 解析为结构化 dict，直接内嵌到生成脚本：
+
+```python
+SLIDES = [
+    {
+        "title": "...",
+        "bullets": ["...", "..."],
+        "notes": "...",
+        "image_placeholder": "...",  # 若有图示说明
+    },
+    ...
+]
+```
+
+### 适配 C：Marp 格式
+
+将 slide-content.md 转换为 Marp Markdown：
+
+```markdown
+---
+marp: true
+theme: default
+paginate: true
+---
+
+# [演讲标题]
+
+---
+
+## [Slide 1 标题]
+
+- [bullet 1]
+- [bullet 2]
+
+<!-- NOTES: [演讲者备注] -->
+
+---
+```
+
+### 适配 D：结构化 Markdown
+
+直接输出为标准化 Markdown，格式清晰，便于导入任何工具：
+
+```markdown
+# [演讲标题]
+> 类型：[分享型/汇报型] | 时长：[X]分钟 | 共 [N] 页
+
+---
+
+## 第 1 页：[标题]
+**内容：** [正文]
+**备注：** [演讲者备注]
+**图示：** [图示说明，如有]
+
+---
 ```
 
 ---
 
-## Step 3：调用生成
+## Step 3：调用 Backend 执行生成
 
-### 3-A：检查 pptx skill 是否已安装
+### Backend A：调用 pptx skill
 
-```bash
-uv run python -c "import pptx; print(pptx.__version__)" 2>/dev/null || echo "NOT_INSTALLED"
-```
-
-**已安装** → 继续执行生成脚本（见下方）
-
-**未安装** → 输出安装指引：
+读取 pptx skill 的 SKILL.md（位于检测到的路径），按其指令执行：
 
 ```
-📦 需要先安装 python-pptx：
+读取 <skill_path>/SKILL.md，使用 Read 工具。
+跳过以下章节（已在 pptdog/gen-slides 中处理）：
+- Preamble
+- 任何项目初始化步骤
 
-  方法一（推荐）：
-    uv pip install python-pptx
-
-  方法二（如果没有 uv）：
-    pip install python-pptx
-
-  安装完成后，重新运行 /gen-slides 即可继续。
-  
-  或者：如果你已安装 LibreOffice，可以使用无依赖的导出模式
-  （将生成 .odp 格式，功能受限）。需要这个吗？(y/N)
+将适配后的内容作为输入传入，按 pptx skill 的指令生成 .pptx 文件。
+输出路径指定为：~/.pptdog/projects/<slug>/slides/deck.pptx
 ```
 
-### 3-B：生成 PPTX
+> ⚠️ **如果 pptx skill 未安装**：提示用户在当前 IDE 中安装 pptx skill，然后重新运行 /gen-slides。
+> Claude Code 用户：输入 `/pptx` 或在 skill 市场搜索 "pptx"。
+
+### Backend B：python-pptx 脚本生成
+
+AI 动态生成完整的 Python 脚本并执行：
 
 ```bash
 mkdir -p ~/.pptdog/projects/<slug>/slides/
 
-# 调用 pptx skill 生成脚本
-# AI 根据 slide-content.md 内容动态生成 Python 脚本
-uv run python /tmp/pptdog-gen-<slug>.py
+# AI 生成脚本到临时文件
+cat > /tmp/pptdog-gen-<slug>.py << 'PYEOF'
+# [AI 根据内容动态生成的完整 python-pptx 脚本]
+# 包含：幻灯片尺寸、配色、每页内容、图示占位框、演讲者备注
+PYEOF
+
+uv run python /tmp/pptdog-gen-<slug>.py \
+  && echo "✅ 生成成功" \
+  || python3 /tmp/pptdog-gen-<slug>.py
 ```
 
-AI 根据 slide-content.md 的结构和选定的模板，生成一个完整的 python-pptx 脚本，包含：
-- 幻灯片尺寸（16:9，1280×720pt）
-- 每页：标题文本框 + 正文文本框 + 图示占位框（若有）
-- 模板配色（从选定模板提取或使用 pptdog 默认配色）
-- 演讲者备注（若 slide-content.md 中有备注内容）
+生成脚本包含：
+- 幻灯片尺寸：16:9（1280×720pt）
+- 配色（见文末 pptdog 默认配色）
+- 每页：标题 + 正文 bullet + 图示占位框（若有）+ 演讲者备注
+- 完整错误处理
 
-生成过程打印进度：
+### Backend C：Marp 生成
 
+```bash
+mkdir -p ~/.pptdog/projects/<slug>/slides/
+
+# 写出 Marp Markdown
+cat > ~/.pptdog/projects/<slug>/slides/deck.md << 'EOF'
+[适配后的 Marp Markdown 内容]
+EOF
+
+# 生成 PPTX（首选）
+marp ~/.pptdog/projects/<slug>/slides/deck.md \
+  --pptx \
+  -o ~/.pptdog/projects/<slug>/slides/deck.pptx \
+  && echo "✅ PPTX 生成成功"
+
+# 生成 HTML（备用，始终可用）
+marp ~/.pptdog/projects/<slug>/slides/deck.md \
+  -o ~/.pptdog/projects/<slug>/slides/deck.html \
+  && echo "✅ HTML 生成成功"
 ```
-🔄 生成中...
-  ✅ 封面页
-  ✅ 第 2 页「[标题]」
-  ✅ 第 3 页「[标题]」
-  ...
-  ✅ 第 [N] 页「总结」
-  
-✅ PPTX 生成完成！
+
+### Backend D：导出 Markdown
+
+```bash
+mkdir -p ~/.pptdog/projects/<slug>/slides/
+
+cat > ~/.pptdog/projects/<slug>/slides/deck.md << 'EOF'
+[结构化 Markdown 内容]
+EOF
+
+echo "✅ Markdown 已导出"
+echo "  可导入：Google Slides / Gamma / Beautiful.ai / Canva / Notion"
 ```
 
 ---
 
 ## Step 4：交付
 
-### 4-A：打印文件路径
+生成成功后，打印：
 
 ```
-🎉 PPT 已生成！
+🎉 演示文稿已生成！
 
-📄 文件路径：~/.pptdog/projects/<slug>/slides/deck.pptx
+📄 文件路径：~/.pptdog/projects/<slug>/slides/deck.[格式]
+🛠  生成方式：[backend 名称]
 📊 共 [N] 张幻灯片
-⏱️  预计演讲时长：约 [X] 分钟（按平均每页 [Y] 秒估算）
+⏱️  预计演讲时长：约 [X] 分钟
 
-用以下命令在 Finder 中查看：
+在 Finder 中查看：
   open ~/.pptdog/projects/<slug>/slides/
 ```
 
-### 4-B：演讲者备注版
+**Qg-3：是否需要演讲者备注版？**
 
 ```
-📝 是否需要导出「演讲者备注版」？
-   （将把 slide-content.md 中的演讲稿内容填入每页备注区，
-     可在演讲时对照使用，不影响观众视图）
-
-   y → 生成 deck-with-notes.pptx
-   n → 跳过
+A. 是，生成备注版（演讲稿填入每页备注区，演讲时对照）
+B. 否，跳过                                           ← 推荐（保持 PPT 简洁）
+C. 只导出备注文稿（纯文字，不嵌入 PPTX）
 ```
 
-若用户选 `y`：
+> 💡 备注版在演讲者视图中可见，听众看不到。选 A 方便排练；选 C 便于打印提词稿。
+
+若选 A：
 
 ```bash
-# 在现有 deck.pptx 基础上追加备注
-uv run python /tmp/pptdog-add-notes-<slug>.py
-
-✅ 备注版已生成：~/.pptdog/projects/<slug>/slides/deck-with-notes.pptx
+# 在现有 deck.pptx 基础上追加备注（python-pptx 脚本或 pptx skill）
+# 输出：deck-with-notes.pptx
 ```
 
-### 4-C：写入 timeline 日志
+**写入 timeline 日志：**
 
 ```bash
-echo '{"ts":"<ISO时间>","slug":"<slug>","event":"gen-slides-completed","pages":<N>,"template":"<模板名>","with_notes":<true/false>}' \
+echo '{"ts":"<ISO时间>","slug":"<slug>","event":"gen-slides-completed","backend":"<backend>","pages":<N>,"with_notes":<true/false>}' \
   >> ~/.pptdog/projects/<slug>/timeline.jsonl
 ```
 
-打印最终状态：
+**打印最终项目状态：**
 
 ```
-📋 项目状态更新：
+📋 项目完成状态：
   ✅ ppt-hours.md
-  ✅ plan-mindmap.md（若有）
+  ✅ mindmap.md（若有）
+  ✅ details.md（若有）
   ✅ slide-content.md
   ✅ review.md（若有）
-  ✅ slides/deck.pptx  ← 新生成
+  ✅ slides/deck.[格式]  ← 刚刚生成
 
 🏁 pptdog 流程完成！祝演讲顺利 🎤
 ```
@@ -322,38 +409,41 @@ echo '{"ts":"<ISO时间>","slug":"<slug>","event":"gen-slides-completed","pages"
 
 > 本节为 AI 内部参考，不主动展示给用户。
 
-### 字数控制原则
-- 标题：≤ 20 字（论点型）
-- 正文 bullet：每条 ≤ 15 字，每页 ≤ 5 条
-- 正文总字数：每页 ≤ 50 字（超过触发 2-A 警告）
-- 空姐效应防御：正文不应出现你在演讲时会完整朗读的长句
+### 内容适配规则（空姐效应最终防线）
 
-### 模板配色默认值（pptdog default）
+在转换为任何 backend 格式之前，强制执行：
+
+| 规则 | 触发条件 | 处理方式 |
+|------|---------|---------|
+| 正文截断 | 某条 bullet > 25 字 | 截为关键词，原句移入 NOTES |
+| 页面拆分 | 单页正文 > 50 字 | 自动拆为两页，标题加「（上）」「（下）」 |
+| 标题论点化 | 标题为话题型（无数字/无观点） | 打印警告，建议改写，不自动修改 |
+| 图示占位 | 检测到 `[图示：...]` 说明 | 生成占位框，显示原始说明文字 |
+
+### pptdog 默认配色
+
 ```python
 COLORS = {
-    "bg": "#FFFFFF",          # 背景：白色
-    "title": "#1A1A2E",       # 标题：深海蓝
-    "body": "#2D2D2D",        # 正文：深灰
-    "accent": "#0066FF",      # 强调色：亮蓝
-    "placeholder_bg": "#F0F4FF",  # 占位框背景
-    "placeholder_border": "#0066FF",
+    "bg":                 "#FFFFFF",  # 背景：白色
+    "title":              "#1A1A2E",  # 标题：深海蓝
+    "body":               "#2D2D2D",  # 正文：深灰
+    "accent":             "#0066FF",  # 强调色：亮蓝
+    "placeholder_bg":     "#F0F4FF",  # 占位框背景
+    "placeholder_border": "#0066FF",  # 占位框边框
 }
 ```
 
-### 图示占位框生成规则
-- 宽度：占幻灯片宽度的 80%，居中
-- 高度：自适应（小图 3cm，大图 6cm）
-- 显示文字：`[图示：<原始说明>]` + 换行 + `（请在 PowerPoint 中替换为实图）`
+### backend 优先级（无用户指定时）
+
+1. pptx skill（已安装）
+2. python-pptx（已安装）
+3. Marp（已安装）
+4. 结构化 Markdown（始终可用）
 
 ### learnings 写入（gen-slides 场景）
 
-```bash
-cat >> ~/.pptdog/learnings.jsonl << 'EOF'
-{"ts":"<ISO时间>","skill":"gen-slides","type":"insight","key":"<标识>","insight":"<一句话>","confidence":7,"source":"observed","context":{"slug":"<slug>","template":"<模板名>","pages":<N>}}
-EOF
-```
-
-触发条件：
-- 某页字数严重超标（> 150 字）→ `pitfall: dense-slides`
+触发条件 → type：
+- 某页正文被自动截断（> 25 字）→ `pitfall: dense-slide-content`
 - 所有标题均为论点型 → `insight: good-title-discipline`
-- 用户在规则警告后选择了修改 → `insight: user-accepted-rule-feedback`
+- 用户选择了非默认 backend → `insight: user-preferred-backend-<name>`
+- pptx skill 未安装，用户选择了 python-pptx → `pitfall: pptx-skill-not-installed`
