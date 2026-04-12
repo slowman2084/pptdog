@@ -41,6 +41,11 @@ if [[ -z "$LOCAL" ]]; then exit 0; fi
 if [[ -f "$MARKER_FILE" ]]; then
   OLD="$(tr -d '[:space:]' < "$MARKER_FILE")"
   rm -f "$MARKER_FILE" "$SNOOZE_FILE"
+  # 升级后同步 tools/
+  if [[ -d "$PPTDOG_DIR/tools" ]]; then
+    mkdir -p "$HOME/.pptdog/tools"
+    cp -f "$PPTDOG_DIR/tools"/* "$HOME/.pptdog/tools/" 2>/dev/null || true
+  fi
   [[ -n "$OLD" ]] && echo "JUST_UPGRADED $OLD $LOCAL"
 fi
 

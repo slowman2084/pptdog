@@ -29,6 +29,10 @@ outputs:
 ### 1. 确认项目 slug
 
 ```bash
+# 版本检查 + 加载 learnings
+~/.pptdog/bin/pptdog-update-check 2>/dev/null || true
+~/.pptdog/bin/pptdog-learnings-search --limit 3 --format pretty 2>/dev/null || true
+
 _PROJECTS_DIR="$HOME/.pptdog/projects"
 _SLUG_COUNT=$(ls "$_PROJECTS_DIR" 2>/dev/null | wc -l | tr -d ' ')
 
@@ -45,6 +49,8 @@ else
   echo "（直接回车选最近的项目，或输入编号）"
 fi
 ```
+
+若输出 `UPGRADE_AVAILABLE <old> <new>`：提示用户「pptdog 有新版本，运行 `cd ~/.pptdog && git pull && bash setup` 可升级」，然后继续。
 
 - 若 slug 已在命令中传入，直接使用（`SLUG=<传入值>`），跳过上方检测。
 
