@@ -14,7 +14,7 @@ benefits_from:
 state_dir: ~/.pptdog/projects/<slug>/
 inputs:
   - ~/.pptdog/projects/<slug>/mindmap.md
-  - ~/.pptdog/projects/<slug>/ppt-hours.json   # 可选，存在则启用汇报型检查
+  - ~/.pptdog/projects/<slug>/ppt-hours.md    # 可选，存在则启用汇报型检查
 outputs:
   - ~/.pptdog/projects/<slug>/details.md
 benefits-from: [ppt-hours, plan-mindmap]
@@ -58,8 +58,8 @@ _MINDMAP="~/.pptdog/projects/$SLUG/mindmap.md"
 cat "$_MINDMAP" 2>/dev/null || echo "⚠️  未找到 mindmap.md，请先运行 /plan-mindmap"
 
 # 3. 读取演讲设定（类型、时长、听众）
-_HOURS_FILE="~/.pptdog/projects/$SLUG/ppt-hours.json"
-cat "$_HOURS_FILE" 2>/dev/null || echo "(ppt-hours.json 不存在，将按分享型流程进行)"
+_HOURS_FILE="$HOME/.pptdog/projects/$SLUG/ppt-hours.md"
+cat "$_HOURS_FILE" 2>/dev/null || echo "(ppt-hours.md 不存在，将按分享型流程进行)"
 
 # 4. 加载 learnings（若存在）
 _LEARNINGS="~/.pptdog/projects/$SLUG/learnings.jsonl"
@@ -300,7 +300,7 @@ D. 自定义：我有另一种展开方式（描述给 AI）
 
 ## Step 3：汇报型专项检查
 
-> **仅当 ppt-hours.json 中 `type === "汇报型"` 时触发此步骤。**
+> **仅当 ppt-hours.md 中 `type: 汇报型` 时触发此步骤。**
 > 每个论点完成 Step 2 后，追加以下检查：
 
 ### 3-A：成果 vs 事情
