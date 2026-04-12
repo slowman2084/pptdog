@@ -300,16 +300,43 @@ check_host() {
   done
 }
 
-# ─── 检查 python-pptx ─────────────────────────────────────────────────────────
-check_python_pptx() {
-  header "检查 python-pptx 依赖"
-  if python3 -c "import pptx" 2>/dev/null; then
-    success "python-pptx 已安装"
+# ─── 检查 PPT 生成 Backend ────────────────────────────────────────────────────
+check_ppt_backends() {
+  header "检测 PPT 生成 Backend"
+
+  local found_any=false
+
+  # 1. 检测 NanoBanana PPT Skills
+  local nano_found=false
+  for base_dir in "$HOME/.claude" "$HOME/.codex" "$HOME/.openclaw" "$HOME/.codebuddy" "$HOME/.cursor" "$HOME/.agents"; do
+    for skill_name in nanobanana-ppt-skills pptx-generation pptx; do
+      if [[ -d "$base_dir/skills/$skill_name" ]]; then
+        success "PPT skill 已安装：${BOLD}$skill_name${RESET}  ${DIM}→ $base_dir/skills/$skill_name${RESET}"
+        nano_found=true
+        found_any=true
+      fi
+    done
+  done
+
+  # 2. 检测 python-pptx（内置 backend）
+  if python3 -c "import pptx" 2>/dev/null || \
+     uv run python -c "import pptx" 2>/dev/null; then
+    success "内置 backend：${BOLD}python-pptx${RESET} 已安装（/gen-slides 可直接用）"
+    found_any=true
   else
-    warn "python-pptx 未安装，/gen-slides 需要它才能生成 .pptx 文件"
-    echo -e "  安装方式："
-    echo -e "    ${CYAN}uv pip install python-pptx${RESET}   （推荐）"
-    echo -e "    ${CYAN}pip install python-pptx${RESET}"
+    dim "  内置 backend：python-pptx 未安装"
+  fi
+
+  # 3. 综合提示
+  echo ""
+  if [[ "$found_any" == true ]]; then
+    info "/gen-slides 时将自动检测以上 backend 并推荐最佳选项"
+  else
+    warn "未检测到任何 PPT 生成 backend，/gen-slides 暂时只能生成 Markdown 规划"
+    echo -e "  推荐选一个安装："
+    echo -e "    ${CYAN}NanoBanana PPT Skills${RESET}（推荐，AI 代码编辑器专用）"
+    echo -e "      → https://github.com/op7418/NanoBanana-PPT-Skills"
+    echo -e "    ${CYAN}uv pip install python-pptx${RESET}（内置 backend，简单直接）"
   fi
 }
 
@@ -341,7 +368,7 @@ print_summary() {
   echo ""
 
   echo -e "${BOLD}数据目录：${RESET}"
-  echo -e "  ${DIM}~/.pptdog/projects/${RESET}     演讲项目（每个项目含 slides/ 和 references/ 子目录）"
+  echo -e "  ${DIM}~/.pptdog/projects/${RESET}     演讲项目（新项目自动创建在当前目录的 pptdog/<slug>/）"
   echo -e "  ${DIM}~/.pptdog/templates/${RESET}    PPT 模板"
   echo -e "  ${DIM}~/.pptdog/learnings.jsonl${RESET}  历史踩坑记录"
   echo -e "  ${DIM}~/.pptdog/tools/${RESET}        可视化工具（review-dashboard.html 等）"
@@ -438,7 +465,7 @@ case "$MODE" in
     done
 
     echo ""
-    check_python_pptx
+    check_ppt_backends
     echo ""
     exit 0
     ;;
@@ -499,7 +526,7 @@ case "$MODE" in
     done
 
     # 3. 检查 python-pptx
-    check_python_pptx
+    check_ppt_backends
 
     # 4. 打印完成摘要
     print_summary "${success_hosts[@]}"
