@@ -368,10 +368,11 @@ print_summary() {
   echo ""
 
   echo -e "${BOLD}数据目录：${RESET}"
-  echo -e "  ${DIM}~/.pptdog/projects/${RESET}     演讲项目（新项目自动创建在当前目录的 pptdog/<slug>/）"
-  echo -e "  ${DIM}~/.pptdog/templates/${RESET}    PPT 模板"
-  echo -e "  ${DIM}~/.pptdog/learnings.jsonl${RESET}  历史踩坑记录"
-  echo -e "  ${DIM}~/.pptdog/tools/${RESET}        可视化工具（review-dashboard.html 等）"
+  echo -e "  ${CYAN}./pptdog/<slug>/${RESET}             演讲项目文件（触发 /ppt-hours 时自动创建在当前目录）"
+  echo -e "  ${DIM}~/.pptdog/projects/<slug>${RESET}  软链接 → ./pptdog/<slug>/（skill 脚本内部使用）"
+  echo -e "  ${DIM}~/.pptdog/templates/${RESET}        PPT 模板"
+  echo -e "  ${DIM}~/.pptdog/learnings.jsonl${RESET}   历史踩坑记录"
+  echo -e "  ${DIM}~/.pptdog/tools/${RESET}            可视化工具（review-dashboard.html 等）"
   echo ""
 
   echo -e "${BOLD}快速开始：${RESET}"
