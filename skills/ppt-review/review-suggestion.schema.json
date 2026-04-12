@@ -45,6 +45,32 @@
                 "reason": { "type": "string" }
               }
             }
+          },
+          "upstream_sync": {
+            "type": "object",
+            "description": "若此建议需要回写上游文件，在此描述同步目标",
+            "required": ["target_file", "target_section"],
+            "additionalProperties": false,
+            "properties": {
+              "target_file": {
+                "type": "string",
+                "enum": ["details.md", "mindmap.md"],
+                "description": "需要同步修改的上游文件"
+              },
+              "target_section": {
+                "type": "string",
+                "description": "目标文件中的定位标识，如'论点 2.1'或'第2章'"
+              },
+              "sync_action": {
+                "type": "string",
+                "enum": ["update_field", "add_note", "restructure"],
+                "description": "update_field=更新某个字段, add_note=追加备注, restructure=调整结构"
+              },
+              "sync_content": {
+                "type": "string",
+                "description": "要同步的具体内容描述（AI 将据此修改上游文件）"
+              }
+            }
           }
         }
       }

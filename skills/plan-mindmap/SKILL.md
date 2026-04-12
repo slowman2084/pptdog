@@ -100,6 +100,7 @@ cat ~/.pptdog/learnings.jsonl 2>/dev/null | grep -E "plan-mindmap|structure|mind
 
 ```
 📁 项目：<slug>
+📁 项目目录：$(readlink -f $HOME/.pptdog/projects/$SLUG 2>/dev/null || echo $HOME/.pptdog/projects/$SLUG)
 📄 ppt-hours.md：✅ 已加载 / ⚠️ 未找到
 🧭 mindmap.md：[未创建 / 草稿版 v1 / 已确认]
 ```

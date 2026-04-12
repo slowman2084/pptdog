@@ -18,7 +18,11 @@
           "suggestion_id": { "type": "string" },
           "choice": { "type": "string", "enum": ["A","B","C","D","E","custom","skip"] },
           "custom_content": { "type": "string" },
-          "note": { "type": "string" }
+          "note": { "type": "string" },
+          "apply_upstream": {
+            "type": "boolean",
+            "description": "是否同步回写上游文件（默认 false）"
+          }
         }
       }
     }

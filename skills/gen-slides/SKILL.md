@@ -62,6 +62,7 @@ fi
 
 ```
 📁 项目：<slug>
+📁 项目目录：$(readlink -f $HOME/.pptdog/projects/$SLUG 2>/dev/null || echo $HOME/.pptdog/projects/$SLUG)
 📄 slide-content.md：[存在 / ⚠️ 不存在]
 📄 review.md：[存在（均分 X.X）/ ⚠️ 不存在]
 📁 slides/：[已有 deck.pptx / 目录不存在]

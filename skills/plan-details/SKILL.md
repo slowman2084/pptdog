@@ -83,6 +83,7 @@ fi
 
 ```
 📋 项目：<slug>
+📁 项目目录：$(readlink -f $HOME/.pptdog/projects/$SLUG 2>/dev/null || echo $HOME/.pptdog/projects/$SLUG)
 📑 骨架：<章节数> 章，<论点数> 个论点
 ⏱  目标时长：<X> 分钟
 👥 听众：<听众描述>

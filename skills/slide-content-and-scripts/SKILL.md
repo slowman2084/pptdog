@@ -138,6 +138,7 @@ AI 打印以下状态摘要（**必须包含论点→内容覆盖率**）：
 
 ```
 📋 项目：<slug>
+📁 项目目录：$(readlink -f $HOME/.pptdog/projects/$SLUG 2>/dev/null || echo $HOME/.pptdog/projects/$SLUG)
 📑 骨架章节数：<N> 章，<M> 个论点（来自 mindmap.md）
 📝 详细内容数：<K> 个论点有内容（来自 details.md）
 📊 内容覆盖率：<K>/<M>（若 K < M，需进入 Step 0 校验）

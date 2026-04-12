@@ -78,6 +78,7 @@ PREV_COUNT=$(ls "$HOME/.pptdog/projects/$SLUG/review-suggestions/" 2>/dev/null |
 打印状态摘要：
 ```
 📋 项目：<slug>
+📁 项目目录：$(readlink -f $HOME/.pptdog/projects/$SLUG 2>/dev/null || echo $HOME/.pptdog/projects/$SLUG)
 📄 slide-content.md：<行数> 行，<Slide数> 张
 🔍 审查模式：<首次审查 | 复查（第N次）>
 ```
@@ -185,7 +186,57 @@ AI 读取 decisions JSON 后，按照每条决策修改 `slide-content.md`：
   slide-content.md 已更新
 ```
 
-### 3.3 询问是否重新审查
+### 3.3 apply 上游同步（apply 完成后自动触发）
+
+修改完 `slide-content.md` 后，AI 检查所有已执行的 decisions：
+
+**分类处理：**
+
+1. **演讲稿/PPT内容层改动**（换布局、改口头说措辞、调整时长）
+   → 只改 `slide-content.md`，不需要上游同步
+   → 标志：suggestion 的 dimension 属于"空姐效应 / 主语检查 / 时长估算 / 口语化程度 / 背稿风险"
+
+2. **论点/案例层改动**（论点逻辑补充、案例缺数据、Why层需要补、数字证据缺失）
+   → 同步回写 `details.md` 对应论点
+   → 标志：suggestion 的 dimension 属于"Why层覆盖 / 真实案例完整性 / 数字证据缺失 / 授人以渔"
+   → 操作：在 details.md 对应论点的字段里追加 `📌 ppt-review 补充（<日期>）：<改动内容摘要>`
+
+3. **结构层改动**（章节逻辑、论点归属、叙事顺序）
+   → 同步回写 `mindmap.md`
+   → 标志：suggestion 的 dimension 属于"大开门/关门 / 章节小开关门 / 叙事弧度 / 金字塔原理 / 一波三折"中的结构性调整
+   → 操作：在 mindmap.md 对应章节/论点旁追加 `<!-- ppt-review 备注（<日期>）：<改动摘要> -->`
+
+**AI 执行前，先打印上游同步预览：**
+
+```
+📋 上游同步预览：
+
+  details.md 需要更新：
+    §论点 2.1 「[论点标题]」
+    → 追加 Why 层说明：「[改动内容]」
+
+  mindmap.md 需要更新：
+    §第2章 「[章节标题]」
+    → 调整结构备注：「[改动摘要]」
+
+  共 <N> 处上游同步
+```
+
+然后询问：
+
+**Qr-sync：是否同步回写上游文件？**
+```
+A. 是，全部同步（推荐）    ← 推荐：保持上下游一致
+B. 是，但逐条确认
+C. 否，只改 slide-content.md（上游保持原样）
+```
+
+> 💡 选 A 可以保持 details.md / mindmap.md 与最终演讲稿的内容一致，
+> 下次重新跑 /slide-content-and-scripts 时不会丢失 review 阶段的补充内容。
+
+若无任何需要上游同步的改动（全部为演讲稿层），跳过本节，直接进入 3.4。
+
+### 3.4 询问是否重新审查
 
 **Qr-apply：修改已完成，是否立即重新审查？**
 
