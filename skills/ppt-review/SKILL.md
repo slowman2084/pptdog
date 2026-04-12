@@ -1,13 +1,12 @@
 ---
 name: ppt-review
-displayName: PPT Review — 生成前的最后一道关
-version: 1.0.0
+displayName: PPT Review — 多维度审查与可视化决策
+version: 2.0.0
 trigger: /ppt-review
 description: >
-  生成真正 PPT 之前的内容评审关卡。AI 扮演最挑剔的听众，
-  从「听得进 → 记得住 → 有启发」三个维度对 slide-content.md
-  进行逐项打分，找出内容问题（不是格式问题）。
-  三层均分 ≥ 7 才建议进入 /gen-slides；否则输出必须修改项。
+  多维度审查 slide-content.md 并驱动可视化决策工具。
+  自动调用三个专项审查器（内容/结构/演讲），生成标准化 JSON，
+  通过 review-dashboard.html 可视化选择，最终执行修改并自动重新评分。
   - ppt-hours
   - plan-mindmap
   - slide-writer
@@ -16,452 +15,229 @@ inputs:
   - ~/.pptdog/projects/<slug>/ppt-hours.md       # 可选，用于加载听众画像
   - ~/.pptdog/learnings.jsonl                     # 全局 learnings
 outputs:
-  - ~/.pptdog/projects/<slug>/review.md
+  - ~/.pptdog/projects/<slug>/review-suggestions/content-<ts>.json
+  - ~/.pptdog/projects/<slug>/review-suggestions/structure-<ts>.json
+  - ~/.pptdog/projects/<slug>/review-suggestions/delivery-<ts>.json
+  - ~/.pptdog/projects/<slug>/review-decisions-<ts>.json
 next-skill: /gen-slides
 benefits-from: [slide-content-and-scripts]
 voice-triggers: ["帮我评审PPT", "帮我检查内容", "帮我看看这个演讲"]
 ---
 
-# PPT Review — 生成前的最后一道关
+# PPT Review — 多维度审查与可视化决策
 
-> **使用方式：** `/ppt-review` 或 `/ppt-review <slug>`（省略 slug 则列出现有项目让用户选择）
+> **使用方式：**
+> - `/ppt-review` — 启动完整审查流程（调用三个审查器 + 打开 Dashboard）
+> - `/ppt-review apply` — 读取 decisions 文件并执行修改
+
+本 skill 是**协调器**，不自己做审查，而是：
+1. 并行调用三个子审查器（review-content / review-structure / review-delivery）
+2. 等待三个 JSON 文件生成
+3. 打开 review-dashboard.html，让用户做决策
+4. 等用户保存 decisions JSON
+5. 执行 apply（按 decisions 修改 slide-content.md）
+6. 自动重新评分（再跑一遍三个审查器，对比前后）
 
 ---
 
 ## Preamble
 
+> AI 在进入任何流程之前，必须完整执行本节。**不要跳过。**
+
 ```bash
-# 版本检查 + 加载 learnings
 ~/.pptdog/bin/pptdog-update-check 2>/dev/null || true
 ~/.pptdog/bin/pptdog-learnings-search --limit 3 --format pretty 2>/dev/null || true
-```
-若输出 `UPGRADE_AVAILABLE <old> <new>`：提示用户「pptdog 有新版本，运行 `cd ~/.pptdog && git pull && bash setup` 可升级」，然后继续。
 
-
-> AI 在进入任何评审之前，必须完整执行本节。**不要跳过。**
-
-### 1. 确认项目 slug
-
-```bash
-# 确认项目 slug
+# slug 自动检测（标准逻辑）
 _PROJECTS_DIR="$HOME/.pptdog/projects"
 _SLUG_COUNT=$(ls "$_PROJECTS_DIR" 2>/dev/null | wc -l | tr -d ' ')
-
 if [ "$_SLUG_COUNT" -eq 0 ]; then
-  echo "⛔ 暂无项目，请先运行 /ppt-hours 新建项目"
-  exit 1
+  echo "⛔ 暂无项目，请先运行 /ppt-hours 新建项目"; exit 1
 elif [ "$_SLUG_COUNT" -eq 1 ]; then
-  SLUG=$(ls "$_PROJECTS_DIR")
-  echo "📁 自动选择唯一项目：$SLUG"
+  SLUG=$(ls "$_PROJECTS_DIR"); echo "📁 自动选择唯一项目：$SLUG"
 else
-  echo "📂 检测到多个项目，请选择："
-  ls -t "$_PROJECTS_DIR" | nl -ba   # 按修改时间倒序，最近优先
-  echo ""
-  echo "（直接回车选最近的项目，或输入编号）"
+  echo "📂 检测到多个项目："; ls -t "$_PROJECTS_DIR" | nl -ba
 fi
+
+# 检查 slide-content.md 是否存在
+[ -f "$HOME/.pptdog/projects/$SLUG/slide-content.md" ] || \
+  { echo "⛔ 未找到 slide-content.md，请先运行 /slide-content-and-scripts"; exit 1; }
+
+# 检查是否有历史 review-suggestions（复查模式检测）
+PREV_COUNT=$(ls "$HOME/.pptdog/projects/$SLUG/review-suggestions/" 2>/dev/null | wc -l | tr -d ' ')
+[ "$PREV_COUNT" -gt 0 ] && echo "📋 检测到 $PREV_COUNT 个历史审查文件（复查模式）"
 ```
 
-- 若 slug 已在命令中传入，直接使用（跳过上方检测，直接 `SLUG=<传入值>`）。
-- 确认后打印当前项目状态：
-
+若 `pptdog-update-check` 输出 `UPGRADE_AVAILABLE <old> <new>`，提示用户升级后继续：
 ```
-📁 项目：<slug>
-📄 slide-content.md：[存在 / ⚠️ 不存在]
-📄 ppt-hours.md：[存在 / 不存在]
-📄 review.md：[已有旧评审 / 无]
+⬆️ pptdog 有新版本（<old> → <new>），建议先升级：
+   cd ~/.pptdog && git pull && bash setup
+（继续审查流程……）
 ```
 
-若 `slide-content.md` 不存在，立即停止并提示：
+打印状态摘要：
+```
+📋 项目：<slug>
+📄 slide-content.md：<行数> 行，<Slide数> 张
+🔍 审查模式：<首次审查 | 复查（第N次）>
+```
+
+若用户输入了 `/ppt-review apply`，**跳过 Step 1 和 Step 2，直接执行 Step 3**。
+
+---
+
+## Step 1：触发三个审查子 skill
+
+AI 说明：
+
+> 正在启动三个专项审查器，并行审查（通常 1-2 分钟）……
 
 ```
-⛔ 找不到 ~/.pptdog/projects/<slug>/slide-content.md
-   请先运行 /slide-writer 生成内容稿，再来评审。
+🔍 内容审查器 (review-content)   — 空姐效应 / 论点深度 / 真实案例 / Why层
+🔍 结构审查器 (review-structure) — 开关门 / 章节逻辑 / 叙事弧度
+🔍 演讲审查器 (review-delivery)  — 主语 / 口语化 / 时长 / 背稿风险
 ```
 
-### 2. 读取 slide-content.md
+**调用指令（AI 执行）：**
+
+```
+INVOKE_SKILL review-content
+INVOKE_SKILL review-structure
+INVOKE_SKILL review-delivery
+```
+
+三个 skill 各自将结果写入 `~/.pptdog/projects/<slug>/review-suggestions/` 目录：
+- `content-<ts>.json`
+- `structure-<ts>.json`
+- `delivery-<ts>.json`
+
+等待三个文件均生成后，验证并打印：
+
+```
+✅ 审查完成：
+  content-<ts>.json   — <N> 条建议（critical: X / major: X / minor: X）
+  structure-<ts>.json — <N> 条建议（critical: X / major: X / minor: X）
+  delivery-<ts>.json  — <N> 条建议（critical: X / major: X / minor: X）
+  共 <总N> 条建议
+```
+
+---
+
+## Step 2：打开 Review Dashboard
+
+AI 执行以下操作，引导用户使用 Dashboard 做决策：
 
 ```bash
-cat ~/.pptdog/projects/$SLUG/slide-content.md
+# 获取 tools 目录中的 HTML 路径
+DASHBOARD="$HOME/.pptdog/tools/review-dashboard.html"
+[ -f "$DASHBOARD" ] || DASHBOARD="$(dirname $(which pptdog-update-check))/../tools/review-dashboard.html"
+
+# macOS 自动打开
+open "$DASHBOARD" 2>/dev/null || \
+  xdg-open "$DASHBOARD" 2>/dev/null || \
+  echo "请手动打开：$DASHBOARD"
+
+echo ""
+echo "📂 审查结果文件目录：$HOME/.pptdog/projects/$SLUG/review-suggestions/"
+echo ""
+echo "操作步骤："
+echo "  1. 在浏览器中选择上方目录的 3 个 JSON 文件"
+echo "  2. 对每条建议选择 A/B/C 或自定义"
+echo "  3. 点击「导出决策文件」下载 review-decisions-<ts>.json"
+echo "  4. 将文件保存到：$HOME/.pptdog/projects/$SLUG/"
+echo "  5. 回到 AI，输入「/ppt-review apply」执行修改"
 ```
 
-解析页面结构，提取：
-- 总页数
-- 每页标题（用于后续评审时精准定位）
-- 分享类型（从文件头部元数据或 ppt-hours.md 读取，默认 `mixed`）
-- 时长（分钟，用于「少即是多」评估）
+---
 
-### 3. 加载 learnings（历史踩坑）
+## Step 3：apply 模式（用户输入 `/ppt-review apply` 时触发）
+
+### 3.1 读取 decisions 文件
 
 ```bash
-cat ~/.pptdog/learnings.jsonl 2>/dev/null | tail -200
+# 查找最新的 decisions 文件
+DECISIONS=$(ls -t "$HOME/.pptdog/projects/$SLUG/review-decisions-"*.json 2>/dev/null | head -1)
+[ -z "$DECISIONS" ] && \
+  echo "⛔ 未找到 decisions 文件，请先完成 Review Dashboard 的决策并导出" && exit 1
+echo "📋 读取决策文件：$DECISIONS"
+cat "$DECISIONS"
 ```
 
-筛选 `skill: "ppt-review"` 或 `type: "pitfall"` 的条目，显示 top 3：
+### 3.2 执行修改
 
+AI 读取 decisions JSON 后，按照每条决策修改 `slide-content.md`：
+
+| decisions 中的 choice | 操作 |
+|----------------------|------|
+| `A` / `B` / `C`      | 用对应建议内容替换 `source_lines` 指定的原始内容 |
+| `custom`             | 用 `custom_content` 字段的内容替换原始内容 |
+| `skip`               | 保持原内容不变，跳过 |
+
+修改时，AI 逐条处理，确保：
+- 精准定位到 `source_lines` 指定的行范围
+- 仅替换目标内容，不影响周边上下文
+- 保持 slide-content.md 的整体格式（Slide 编号、标题格式等）
+
+执行完成后，打印修改摘要：
 ```
-💡 你的历史踩坑（来自 learnings）：
-  1. [insight] — 置信度 [confidence]/10
-  2. ...
-  3. ...
-（如无历史记录，跳过此展示）
-```
-
-### 4. 确认评审模式
-
-**Qr-1：评审深度选择**
-
-```
-A. 快速评审 — 只看 Top 3 问题，5分钟内给结论       ← 时间紧时选
-B. 标准评审 — 三层全部打分，给完整评审报告          ← 推荐默认
-C. 深度评审 — 三层打分 + 每个问题都给具体修改示例
-D. 自定义：指定某一层或某几个评审项
-```
-
-> 💡 第一次评审建议选 B；对内容很有把握时选 A 做最终确认；想彻底打磨时选 C。
-
-**Qr-2：分享类型确认**
-
-```
-A. 分享型（我的判断：AI 的判断依据）
-B. 汇报型（会额外检查成果举证/痛点数字化/推导过程/废话标题）
-C. 混合型（两套评审项都跑）
-D. 纠正 AI 的判断：[请说明]
+✅ 修改完成：
+  应用 <N> 条建议（跳过 <M> 条）
+  slide-content.md 已更新
 ```
 
-> 💡 如果 ppt-hours.md 存在且类型已记录，AI 应先显示记录值，让用户确认或纠正。
+### 3.3 询问是否重新审查
 
-用户确认后进入评审主流程。
+**Qr-apply：修改已完成，是否立即重新审查？**
 
----
-
-## 评审主流程
-
-> AI 作为最挑剔的听众，完整过一遍 slide-content.md，然后输出以下评审报告。
-> **评审对象是内容，不是格式（字体、配色、排版不在此范畴）。**
-
----
-
-## 三层评分卡
-
-### 第一层：听得进（能不能让听众保持注意力）
-
-| # | 评审项 | 核心问题 | 分数 |
-|---|-------|---------|------|
-| ① | **空姐效应检查** | PPT 上有没有你会读的文字？听众已知的内容有没有被重复讲？ | /10 |
-| ② | **内容存在理由** | 每个内容块有没有存在理由？有没有「为说而说」的废内容？ | /10 |
-| ③ | **少即是多** | [X] 分钟内讲完可行吗？最重要的内容有没有说深？ | /10 |
-
-**第一层均分：[X.X] / 10**
-
-评分可视化：
 ```
-① 空姐效应  [████████░░] 8/10
-② 存在理由  [███████░░░] 7/10
-③ 少即是多  [██████░░░░] 6/10
-             第一层均分：7.0
+A. 是，立即重新运行三个审查器对比前后变化   ← 推荐
+B. 否，我先看看修改结果，稍后再审查
+```
+
+若选 **A**，重新运行 Step 1（三个审查器），完成后输出对比报告：
+
+```
+## 审查对比（第N次 vs 第N+1次）
+
+| 维度             | 上次 critical | 本次 | 变化   |
+|-----------------|--------------|------|--------|
+| 内容（content）  | 3            | 1    | ✅ -2  |
+| 结构（structure）| 2            | 0    | ✅ -2  |
+| 演讲（delivery） | 1            | 1    | — 持平 |
+| **总计**         | 6            | 2    | ✅ -4  |
+
+💡 仍有 <N> 条 major 建议，建议再过一遍 Dashboard 决策后进入 /gen-slides
+```
+
+若本轮所有 critical 和 major 均已清零：
+
+```
+🎉 所有重要问题已修复，可以进入 /gen-slides 生成 PPT 了！
+```
+
+若选 **B**，打印提示后结束：
+```
+👍 好的，修改已保存。准备好了随时运行 /ppt-review apply 再次审查。
 ```
 
 ---
 
-### 第二层：记得住（听众能不能形成长期记忆）
-
-> 注：⑤b 章节小开门 和 ⑥b 章节小关门 是新增评审项，评估每个章节级别的开关门质量。缺失这两项通常导致演讲节奏平，听众在章节之间注意力流失。
-
-| # | 评审项 | 核心问题 | 分数 |
-|---|-------|---------|------|
-| ④ | **故事线清晰度** | 能用一句话描述整体结构吗？有没有逻辑断层？ | /10 |
-| ⑤ | **大开门力度** | 全场前 30 秒能让听众放下手机吗？有没有故事/反常识/问题钩子？内容是否具体（不是方向描述）？ | /10 |
-| ⑤b | **章节小开门** | 每个章节开头是否有钩子（问题/悬念/数字），让听众对本章产生好奇？小开门内容是否基于本章实际素材？ | /10 |
-| ⑥ | **大关门力度** | 全场结尾，听众能在 3 分钟内向同事复述核心内容吗？有没有升华或行动号召？ | /10 |
-| ⑥b | **章节小关门** | 每章结尾是否有本章结论固化 + 过渡到下章的连接？小关门内容是否具体（不是"总结一下"这种废话）？ | /10 |
-| ⑦ | **标题论点化** | 所有页面标题是观点（论点）还是话题（大词）？ | /10 |
-
-**第二层均分：[X.X] / 10**
-
-> 注：⑤b 和 ⑥b 计入第二层均分。
-
-评分可视化：
-```
-④ 故事线      [█████████░] 9/10
-⑤ 大开门      [███████░░░] 7/10
-⑥ 大关门      [████████░░] 8/10
-⑦ 标题论点    [██████░░░░] 6/10
-⑤b 章节小开门 [███████░░░] 7/10
-⑥b 章节小关门 [██████░░░░] 6/10
-               第二层均分：7.2
-```
-
----
-
-### 第三层：有启发（听众能不能从中获得新认知）
-
-| # | 评审项 | 核心问题 | 分数 |
-|---|-------|---------|------|
-| ⑧ | **真实案例支撑** | 每个抽象观点有没有工作中的真实案例？距离感是否过远？ | /10 |
-| ⑨ | **深度思考** | 不只有 What，有没有 Why？有没有授人以渔的方法论？ | /10 |
-
-**第三层均分：[X.X] / 10**
-
-评分可视化：
-```
-⑧ 真实案例  [████████░░] 8/10
-⑨ 深度思考  [███████░░░] 7/10
-             第三层均分：7.5
-```
-
----
-
-### 汇报型额外评审项 🔴
-
-> 仅当分享类型为「汇报型」或「混合型」时执行。
-
-| # | 评审项 | 核心问题 | 通过？ |
-|---|-------|---------|--------|
-| ⑩ | **成果 vs 事情** | 说的是成果还是事情？有没有用「通过X，实现Y，量化Z」格式？ | ✅/⚠️ |
-| ⑪ | **痛点数字化** | 有没有量化「痛有多痛」？能不能再往痛的方向升一级？ | ✅/⚠️ |
-| ⑫ | **推导过程** | 有没有说「为什么这样做」，而不只是「做了什么」？ | ✅/⚠️ |
-| ⑬ | **标题废话检查** | 标题宾语是否具体？有没有「发现了一个问题」「通过策略，突出优势」这类废话？ | ✅/⚠️ |
-
----
-
-## 综合评审结论
-
-```
-┌─────────────────────────────────────────────────────┐
-│  📊 三层评分总览                                      │
-│                                                       │
-│  第一层：听得进   [X.X/10]  [████████░░]             │
-│  第二层：记得住   [X.X/10]  [████████░░]             │
-│  第三层：有启发   [X.X/10]  [████████░░]             │
-│                                                       │
-│  综合均分：[X.X/10]                                   │
-└─────────────────────────────────────────────────────┘
-```
-
-### 通过门槛判断
-
-- **三层均分全部 ≥ 7** → ✅ 内容质量达标，建议进入 `/gen-slides`
-- **任意一层均分 < 7** → ⚠️ 内容需要修改，以下是**必须修改项**（进入 `/gen-slides` 前必须解决）
-
----
-
-## Top 3 问题 + 具体修改建议
-
-> 精准定位到 slide-content.md 的具体页面。
-
-### 🔴 问题 1：[问题标题]
-- **评审项：** ① / ④ / ⑧ / ... （对应上方编号）
-- **定位：** 第 [X] 页「[页面标题]」
-- **问题描述：** [具体说明哪里不对，为什么不对]
-- **修改建议：**
-  - 当前写法：[原文摘要]
-  - 建议改为：[具体修改方向，可以是重写示例或操作步骤]
-
-### 🟡 问题 2：[问题标题]
-- **评审项：** ...
-- **定位：** 第 [X] 页 / 整体结构
-- **问题描述：** ...
-- **修改建议：** ...
-
-### 🟡 问题 3：[问题标题]
-- **评审项：** ...
-- **定位：** ...
-- **问题描述：** ...
-- **修改建议：** ...
-
----
-
-## 必须修改项清单（仅当未通过时输出）
-
-```
-⛔ 以下问题必须修改后才能生成 PPT：
-
-□ [问题1] — 影响第 [X] 页
-□ [问题2] — 影响整体故事线
-□ [问题3] — ...
-
-修改完成后，重新运行 /ppt-review 确认通过。
-
-**Qr-3：接下来你想怎么做？**
-
-```
-A. 我现在去修改，改完再跑一次 /ppt-review
-B. 这些问题我知道了，直接生成 PPT（风险自担）   ← 仅当均分 ≥ 6 时 AI 才允许
-C. 帮我逐条修改（AI 直接改 slide-content.md）
-D. 先看其他问题的详细说明，再决定
-```
-
-> 💡 选 C 时 AI 会逐条展示修改前后对比，确认后再写入文件。
-
----
-
-## 文件写入
-
-评审完成后，自动写入 review.md：
-
-```bash
-cat > ~/.pptdog/projects/$SLUG/review.md << 'EOF'
-# PPT Review — $SLUG
-评审时间：<ISO 时间>
-评审版本：slide-content.md（MD5 或最后修改时间）
-
-## 分享基本信息
-- 类型：[分享型/汇报型/混合型]
-- 时长：[X] 分钟
-- 总页数：[N] 页
-
-## 三层评分
-| 层次 | 均分 | 通过？ |
-|------|------|--------|
-| 第一层：听得进 | [X.X]/10 | ✅/⚠️ |
-| 第二层：记得住 | [X.X]/10 | ✅/⚠️ |
-| 第三层：有启发 | [X.X]/10 | ✅/⚠️ |
-| **综合均分** | **[X.X]/10** | **✅ 通过 / ⚠️ 未通过** |
-
-## 各项得分明细
-[完整评分表]
-
-## Top 3 问题与建议
-[完整内容]
-
-## 汇报型额外评审（若适用）
-[完整内容]
-
-## 结论
-[通过 → 建议进入 /gen-slides] 或 [未通过 → 必须修改项列表]
-EOF
-```
-
-打印：
-
-```
-✅ review.md 已保存到 ~/.pptdog/projects/<slug>/review.md
-
-[通过时]：👉 可以进入下一步：/gen-slides
-[未通过时]：⚠️ 请按上方修改清单修改 slide-content.md，然后重跑 /ppt-review
-```
-
----
-
-## learnings 写入
-
-评审结束后，对本次发现的典型问题自动追加写入 learnings.jsonl：
-
-```bash
-# 仅对有价值的发现写入，不是每次都写
-# 触发条件：某个评审项得分 ≤ 5，或汇报型额外项有 ⚠️
-cat >> ~/.pptdog/learnings.jsonl << 'EOF'
-{"ts":"<ISO时间>","skill":"ppt-review","type":"pitfall","key":"<问题标识，如：missing-real-case>","insight":"<具体问题描述，一句话>","confidence":8,"source":"observed","context":{"style":"share|report|mixed","audience":"engineer|manager|mixed","duration":<分钟数>}}
-EOF
-```
-
-learnings 写入触发条件：
-
-| 触发条件 | type | 示例 key |
-|---------|------|---------|
-| 评审项得分 ≤ 5 | `pitfall` | `weak-opening`, `no-real-case` |
-| 标题全是话题不是论点 | `pitfall` | `topic-not-argument-titles` |
-| 汇报型：成果写成了事情 | `pitfall` | `outcome-vs-activity` |
-| 痛点没有数字化 | `pitfall` | `pain-not-quantified` |
-| 用户修正了 AI 的评分判断 | `correction` | `user-corrected-score-layer2` |
-
----
-
-## 修改后复查
-
-> 用户改完 slide-content.md 之后，可以随时回来运行 `/ppt-review` 触发复查。
-> 复查时，AI 会对比本次得分和上次 review.md 中的历史得分，告诉你：
-> - 哪些问题已修复（✅）
-> - 哪些还没改到（⚠️）
-> - 总分变化（+X 分 / -X 分）
-
-**复查触发逻辑：**
-
-```bash
-# 检查是否存在已有 review.md
-_REVIEW_FILE="$HOME/.pptdog/projects/$SLUG/review.md"
-if [ -f "$_REVIEW_FILE" ]; then
-  # 提取上次综合均分
-  _LAST_SCORE=$(grep "综合均分\|总分" "$_REVIEW_FILE" | tail -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
-  echo "📋 检测到上次评审记录，综合均分：${_LAST_SCORE:-未知}"
-  echo "本次为复查模式，将对比上次结果"
-fi
-```
-
-若检测到已有 review.md，AI 在评审完成后额外输出对比表：
-
-```
-## 📊 本次 vs 上次对比
-
-| 评审项         | 上次 | 本次 | 变化   |
-|--------------|------|------|--------|
-| ①内容精准度   | 6    | 8    | ✅ +2  |
-| ②听众匹配度   | 7    | 7    | — 持平 |
-| ③空姐效应     | 5    | 8    | ✅ +3  |
-| ...           | ...  | ...  | ...    |
-| **综合均分**  | 6.2  | 7.5  | ✅ +1.3 |
-```
-
-若综合均分首次达到 7.0+：
-> 🎉 通过评审门槛！可以进入 `/gen-slides` 了。
-
-若仍未达到 7.0：
-> ⚠️ 综合均分 X.X，还差 Y 分到门槛。以下是当前最需要改的 Top 3：
-
----
-
-## 内置方法论快查
-
-> 本节为 AI 内部参考，评审时按需调取，不主动向用户完整展示。
-
-### 空姐效应（评审项①）
-- PPT 上写了你要说的话 → 眼睛被锁死在 PPT 上
-- 听众已知的内容（What / How 层）重复讲 → 听众关机
-- 检查方式：逐页看，有没有大段你会在 PPT 上读的句子？
-
-### 标题论点化（评审项⑦ 和 ⑬）
-话题 vs 论点对比：
-```
-❌ 话题型（大词）：   「质量体系建设」「稳定性提升」「架构优化」
-✅ 论点型（观点）：   「三步构建零故障交付流水线」「99.9% → 99.99% 背后的三个根本改变」
-❌ 废话型（无宾语）： 「发现了一个问题」「通过策略，突出优势」
-✅ 具体型（有宾语）： 「K8S 资源碎片化导致成本超预算 40%」
-```
-
-### 一波三折结构（评审项④）
-分享型的故事线模板：挑战 → 思考 → 结果（递进三轮）
-- 开门：反常识 / 问题引导 / 共鸣故事
-- 关门：升华主题价值 + 听众能复述的金句
-
-### 成果举证（汇报型评审项⑩⑪）
-痛点梯度（越往下越有价值）：
-```
-不痛：「需要提升 SLO」
-一般：「涉及业务关键流程」
-较痛：「涉及客户支付流程」
-很痛：「三个9的服务质量 = 每月损失超过1000万」
-```
-成果格式：「通过 [方法/工具]，[指标] 从 [X] 提升到 [Y]，累计 [业务影响]」
-
-### 章节小开门 / 小关门（评审项⑤b/⑥b）
-
-**小开门检查：**
-- 每章第一页，是否有一个让听众产生好奇的钩子？
-- 钩子是否基于本章真实素材（数字/故事/问题），而不是"接下来我们看第二章"这种废话？
-- 小开门是否和本章内容直接相关，而不是游离的引子？
-
-```
-❌ 无效小开门："接下来讲一下监控建设"
-❌ 无效小开门："第二章，我们来看看质量体系"
-✅ 有效小开门："你们有没有遇到过，凌晨三点被告警叫醒，但根本不知道是哪个服务出问题？"（引出监控章节）
-✅ 有效小开门："我们的故障平均定位时长是 43 分钟——你猜行业平均是多少？"（反常识钩子）
-```
-
-**小关门检查：**
-- 每章最后一页，是否有本章核心结论的固化？
-- 过渡到下一章是否口语化、有逻辑连接（不是"以上就是第一章，接下来第二章"）？
-
-```
-❌ 无效小关门："以上就是监控建设的内容"
-✅ 有效小关门："有了这套监控，我们把故障定位时长从43分钟压到了3分钟——但这只是第一步，定位快了，如何修得也快？这就是我们接下来要讲的……"
-```
+## 附录：审查维度速查
+
+三个子审查器各自负责的维度参考表（详细规则见各子 skill 的 SKILL.md）：
+
+| 审查器     | 维度         | 说明                               |
+|------------|-------------|-----------------------------------|
+| content    | 空姐效应     | PPT 上是否有需要读的内容            |
+| content    | Why 层覆盖   | 每个论点有没有解释为什么            |
+| content    | 真实案例     | 案例是否完整（背景/冲突/解决/结果） |
+| content    | 假问题识别   | 问题描述是否用了"不/没/非"          |
+| content    | 授人以渔     | 是否有可复用的方法论                |
+| structure  | 大开门       | 前30秒是否有钩子                   |
+| structure  | 大关门       | 结尾是否有升华和可复述结论          |
+| structure  | 章节小开关门 | 每章是否有小钩子+结论固化           |
+| structure  | 叙事弧度     | 一波三折/金字塔原理是否完整         |
+| delivery   | 主语检查     | 演讲稿里"我们"→"我"                |
+| delivery   | 口语化       | 能不看稿直接讲出来吗                |
+| delivery   | 时长估算     | 字数估算是否匹配目标时长            |
+| delivery   | 背稿风险     | 口头说是否超过200字                 |

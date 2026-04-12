@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pptdog review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #FAFAFA;
+      --text: #1A1A1A;
+      --red: #E8453C;
+      --border: #E0E0E0;
+      --code-bg: #F5F5F5;
+      --content-color: #2D6A4F;
+      --structure-color: #1D3557;
+      --delivery-color: #6B4226;
+      --major-color: #E87A1E;
+      --minor-color: #888;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Helvetica Neue', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      font-size: 14px;
+      line-height: 1.8;
+      min-height: 100vh;
+    }
+
+    h1, h2, h3, .site-title {
+      font-family: 'Noto Serif JP', 'Hiragino Mincho ProN', Georgia, serif;
+      font-weight: 400;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+
+    /* ── TOP HEADER ── */
+    #site-header {
+      border-bottom: 1px solid var(--border);
+      padding: 28px 0 20px;
+      margin-bottom: 32px;
+    }
+
+    .site-title {
+      font-size: 13px;
+      letter-spacing: 0.15em;
+      color: var(--red);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    #project-name {
+      font-size: 22px;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+
+    #project-meta {
+      font-size: 12px;
+      color: #999;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stat-critical { color: var(--red); font-weight: 600; }
+    .stat-major { color: var(--major-color); font-weight: 600; }
+    .stat-minor { color: var(--minor-color); }
+
+    /* ── FILTER BAR ── */
+    #filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .filter-label {
+      font-size: 11px;
+      color: #aaa;
+      letter-spacing: 0.08em;
+      margin-right: 2px;
+    }
+
+    .filter-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: #666;
+      padding: 3px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .filter-btn:hover { border-color: #bbb; color: var(--text); }
+    .filter-btn.active {
+      background: var(--text);
+      border-color: var(--text);
+      color: var(--bg);
+    }
+
+    /* ── CARDS ── */
+    #cards-container { padding-bottom: 100px; }
+
+    .reviewer-section { margin-bottom: 40px; }
+
+    .reviewer-section-title {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #aaa;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .suggestion-card {
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      background: #fff;
+      transition: border-color 0.15s;
+    }
+
+    .suggestion-card.decided { border-color: #c8e6c9; background: #f9fefb; }
+    .suggestion-card.skipped { opacity: 0.5; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    .card-header:hover { background: #fafafa; }
+    .suggestion-card.collapsed .card-header { border-bottom-color: transparent; }
+    .suggestion-card:not(.collapsed) .card-header { border-bottom-color: var(--border); }
+
+    .tag {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 2px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .tag-content { background: #e8f5ee; color: var(--content-color); }
+    .tag-structure { background: #e3eaf4; color: var(--structure-color); }
+    .tag-delivery { background: #f4ede7; color: var(--delivery-color); }
+
+    .tag-critical { background: #fdecea; color: var(--red); }
+    .tag-major { background: #fef3e8; color: var(--major-color); }
+    .tag-minor { background: #f5f5f5; color: var(--minor-color); }
+
+    .card-dimension {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .card-status-icon {
+      font-size: 14px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .collapse-arrow {
+      font-size: 10px;
+      color: #bbb;
+      transition: transform 0.15s;
+    }
+
+    .suggestion-card.collapsed .collapse-arrow { transform: rotate(-90deg); }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    .suggestion-card.collapsed .card-body { display: none; }
+
+    .source-line {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 10px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+    }
+
+    .original-content {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 16px;
+      color: #555;
+    }
+
+    .card-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    /* ── OPTIONS ── */
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .option-card {
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background: #fff;
+    }
+
+    .option-card:hover { border-color: #bbb; }
+
+    .option-card.selected {
+      border-color: var(--text);
+      background: #f8f8f8;
+    }
+
+    .option-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .option-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .option-card.selected .option-label {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .option-desc {
+      font-size: 12px;
+      color: #555;
+      flex: 1;
+    }
+
+    .option-recommended {
+      font-size: 11px;
+      color: var(--red);
+    }
+
+    .option-content {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.6;
+      color: #444;
+      margin-top: 8px;
+    }
+
+    .option-reason {
+      font-size: 11px;
+      color: #999;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    /* ── CUSTOM OPTION ── */
+    .custom-toggle {
+      font-size: 12px;
+      color: #aaa;
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 4px 0;
+      font-family: inherit;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .custom-toggle:hover { color: var(--text); }
+
+    .custom-area {
+      display: none;
+      margin-bottom: 8px;
+    }
+
+    .custom-area.open { display: block; }
+
+    .custom-textarea, .note-textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 12px;
+      resize: vertical;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      line-height: 1.6;
+    }
+
+    .custom-textarea { min-height: 80px; margin-bottom: 6px; }
+    .custom-textarea:focus, .note-textarea:focus { border-color: #999; }
+
+    .custom-confirm-btn {
+      font-size: 12px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      background: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .custom-confirm-btn:hover { background: var(--code-bg); }
+
+    .note-area {
+      margin-top: 8px;
+    }
+
+    .note-textarea {
+      min-height: 36px;
+      font-family: inherit;
+      font-size: 12px;
+      color: #888;
+    }
+
+    /* ── CARD ACTIONS ── */
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      justify-content: flex-end;
+    }
+
+    .btn-skip {
+      padding: 6px 16px;
+      border: 1px solid var(--border);
+      background: none;
+      color: #999;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-skip:hover { border-color: #bbb; color: #666; }
+
+    .btn-confirm {
+      padding: 6px 18px;
+      border: 1px solid var(--text);
+      background: var(--text);
+      color: var(--bg);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-confirm:hover { background: #333; border-color: #333; }
+    .btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── STICKY BOTTOM BAR ── */
+    #bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(250,250,250,0.95);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+    }
+
+    #bottom-bar .container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+
+    .progress-area {
+      flex: 1;
+    }
+
+    .progress-text {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .progress-bar-track {
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+    }
+
+    .progress-bar-fill {
+      height: 2px;
+      background: var(--text);
+      border-radius: 1px;
+      transition: width 0.3s;
+    }
+
+    .btn-export {
+      padding: 8px 20px;
+      border: 1px solid var(--text);
+      background: var(--text);
+      color: var(--bg);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Noto Serif JP', Georgia, serif;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-export:hover { background: #333; border-color: #333; }
+    .btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── EMPTY STATE ── */
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 200px);
+      text-align: center;
+      padding: 60px 40px;
+    }
+
+    .empty-logo {
+      font-family: 'Noto Serif JP', Georgia, serif;
+      font-size: 13px;
+      letter-spacing: 0.25em;
+      color: var(--red);
+      text-transform: uppercase;
+      margin-bottom: 40px;
+    }
+
+    .drop-zone {
+      border: 1px dashed var(--border);
+      padding: 48px 60px;
+      width: 100%;
+      max-width: 480px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      margin-bottom: 16px;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #aaa;
+      background: #f5f5f5;
+    }
+
+    .drop-icon {
+      font-size: 28px;
+      color: var(--border);
+      margin-bottom: 16px;
+    }
+
+    .drop-text {
+      font-size: 14px;
+      color: #999;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .drop-text strong {
+      display: block;
+      color: #555;
+      font-size: 15px;
+      margin-bottom: 6px;
+      font-weight: 400;
+    }
+
+    .btn-select-files {
+      display: inline-block;
+      padding: 8px 24px;
+      border: 1px solid var(--text);
+      background: var(--text);
+      color: var(--bg);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Noto Serif JP', Georgia, serif;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-select-files:hover { background: #333; }
+
+    .drop-hint {
+      font-size: 11px;
+      color: #bbb;
+      letter-spacing: 0.05em;
+      margin-top: 12px;
+    }
+
+    /* ── EXPORT NOTICE ── */
+    #export-notice {
+      display: none;
+      margin-top: 16px;
+      padding: 16px 20px;
+      border: 1px solid #c8e6c9;
+      background: #f9fefb;
+      font-size: 12px;
+      line-height: 1.9;
+    }
+
+    #export-notice.visible { display: block; }
+
+    #export-notice .notice-path {
+      font-family: 'SF Mono', 'Menlo', monospace;
+      background: var(--code-bg);
+      padding: 8px 12px;
+      margin: 8px 0;
+      font-size: 11px;
+      border: 1px solid var(--border);
+    }
+
+    #export-notice .notice-cmd {
+      font-family: 'SF Mono', 'Menlo', monospace;
+      color: var(--content-color);
+      font-size: 11px;
+    }
+
+    /* ── HIDDEN FILE INPUT ── */
+    #file-input { display: none; }
+
+    /* ── MAIN CONTENT WRAPPER ── */
+    #main-content { display: none; }
+  </style>
+</head>
+<body>
+
+<input type="file" id="file-input" multiple accept=".json">
+
+<!-- EMPTY STATE -->
+<div id="empty-state">
+  <div class="empty-logo">pptdog review</div>
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-icon">⊕</div>
+    <div class="drop-text">
+      <strong>将审查结果 JSON 文件拖入此处</strong>
+      或点击下方按钮选择文件
+    </div>
+    <button class="btn-select-files" onclick="document.getElementById('file-input').click()">选择文件</button>
+  </div>
+  <div class="drop-hint">支持格式：content-*.json / structure-*.json / delivery-*.json</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main-content">
+  <div class="container">
+    <!-- HEADER -->
+    <header id="site-header">
+      <div class="site-title">pptdog review</div>
+      <h1 id="project-name">—</h1>
+      <div id="project-meta">
+        <span id="meta-ts">—</span>
+        <span id="meta-total">共 0 条建议</span>
+        <span class="stat-badge stat-critical" id="meta-critical">critical: 0</span>
+        <span class="stat-badge stat-major" id="meta-major">major: 0</span>
+        <span class="stat-badge stat-minor" id="meta-minor">minor: 0</span>
+      </div>
+    </header>
+
+    <!-- FILTER BAR -->
+    <div id="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">审查器</span>
+        <button class="filter-btn active" data-filter="reviewer" data-value="all">全部</button>
+        <button class="filter-btn" data-filter="reviewer" data-value="content">内容</button>
+        <button class="filter-btn" data-filter="reviewer" data-value="structure">结构</button>
+        <button class="filter-btn" data-filter="reviewer" data-value="delivery">演讲</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">严重度</span>
+        <button class="filter-btn active" data-filter="severity" data-value="all">全部</button>
+        <button class="filter-btn" data-filter="severity" data-value="critical">critical</button>
+        <button class="filter-btn" data-filter="severity" data-value="major">major</button>
+        <button class="filter-btn" data-filter="severity" data-value="minor">minor</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">状态</span>
+        <button class="filter-btn active" data-filter="status" data-value="all">全部</button>
+        <button class="filter-btn" data-filter="status" data-value="undecided">未决策</button>
+        <button class="filter-btn" data-filter="status" data-value="decided">已决策</button>
+        <button class="filter-btn" data-filter="status" data-value="skipped">已跳过</button>
+      </div>
+    </div>
+
+    <!-- CARDS -->
+    <div id="cards-container"></div>
+
+    <!-- EXPORT NOTICE -->
+    <div id="export-notice">
+      <strong>✓ 已导出决策文件</strong><br>
+      请将此文件保存到：
+      <div class="notice-path" id="notice-path">~/.pptdog/projects/&lt;slug&gt;/review-decisions-&lt;ts&gt;.json</div>
+      然后在 AI 中运行：
+      <span class="notice-cmd">/ppt-review apply</span> 执行修改
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottom-bar" style="display:none">
+  <div class="container">
+    <div class="progress-area">
+      <div class="progress-text" id="progress-text">已决策 0 / 共 0 条</div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+    <button class="btn-export" id="btn-export" onclick="exportDecisions()">导出决策文件</button>
+  </div>
+</div>
+
+<script>
+  // ── STATE ──
+  const state = {
+    suggestions: [],     // merged & sorted
+    decisions: {},       // { suggestion_id: { choice, custom_content, note } }
+    skipped: new Set(),  // suggestion_id
+    slug: '',
+    ts: '',
+    filters: { reviewer: 'all', severity: 'all', status: 'all' }
+  };
+
+  // ── SEVERITY ORDER ──
+  const SEV_ORDER = { critical: 0, major: 1, minor: 2 };
+  const REVIEWER_LABELS = { content: '内容', structure: '结构', delivery: '演讲' };
+
+  // ── FILE INPUT SETUP ──
+  document.getElementById('file-input').addEventListener('change', function(e) {
+    handleFiles(Array.from(e.target.files));
+  });
+
+  // ── DRAG & DROP ──
+  const dropZone = document.getElementById('drop-zone');
+
+  document.body.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  document.body.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+  });
+  document.body.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    handleFiles(Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.json')));
+  });
+
+  dropZone.addEventListener('click', () => {
+    document.getElementById('file-input').click();
+  });
+
+  // ── HANDLE FILES ──
+  function handleFiles(files) {
+    if (!files.length) return;
+    let loaded = 0;
+    const allData = [];
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          allData.push(data);
+        } catch(err) {
+          console.warn('Failed to parse', file.name, err);
+        }
+        loaded++;
+        if (loaded === files.length) processData(allData);
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  function processData(allData) {
+    if (!allData.length) return;
+
+    // Extract slug and ts from first file
+    const first = allData[0];
+    state.slug = first.slug || first.project || 'unknown';
+    state.ts = first.ts || first.timestamp || new Date().toISOString();
+
+    // Merge suggestions from all files
+    let merged = [];
+    allData.forEach(data => {
+      const reviewer = data.reviewer || data.reviewer_id || 'unknown';
+      const suggestions = data.suggestions || data.items || [];
+      suggestions.forEach(s => {
+        merged.push({ ...s, reviewer_id: s.reviewer_id || reviewer });
+      });
+    });
+
+    // Sort by severity
+    merged.sort((a, b) => {
+      const sa = SEV_ORDER[a.severity] ?? 3;
+      const sb = SEV_ORDER[b.severity] ?? 3;
+      return sa - sb;
+    });
+
+    state.suggestions = merged;
+    state.decisions = {};
+    state.skipped = new Set();
+
+    updateHeader();
+    renderCards();
+    showMainContent();
+    updateProgress();
+  }
+
+  function updateHeader() {
+    document.getElementById('project-name').textContent = state.slug;
+    const tsDate = new Date(state.ts);
+    document.getElementById('meta-ts').textContent = isNaN(tsDate)
+      ? state.ts
+      : tsDate.toLocaleString('zh-CN');
+
+    const total = state.suggestions.length;
+    const critical = state.suggestions.filter(s => s.severity === 'critical').length;
+    const major = state.suggestions.filter(s => s.severity === 'major').length;
+    const minor = state.suggestions.filter(s => s.severity === 'minor').length;
+
+    document.getElementById('meta-total').textContent = `共 ${total} 条建议`;
+    document.getElementById('meta-critical').textContent = `critical: ${critical}`;
+    document.getElementById('meta-major').textContent = `major: ${major}`;
+    document.getElementById('meta-minor').textContent = `minor: ${minor}`;
+  }
+
+  function showMainContent() {
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    document.getElementById('bottom-bar').style.display = 'block';
+  }
+
+  // ── FILTER BUTTONS ──
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const filterType = this.dataset.filter;
+      const value = this.dataset.value;
+      state.filters[filterType] = value;
+      // Update active state in group
+      document.querySelectorAll(`.filter-btn[data-filter="${filterType}"]`)
+        .forEach(b => b.classList.toggle('active', b.dataset.value === value));
+      applyFilters();
+    });
+  });
+
+  function applyFilters() {
+    const cards = document.querySelectorAll('.suggestion-card');
+    cards.forEach(card => {
+      const id = card.dataset.id;
+      const reviewer = card.dataset.reviewer;
+      const severity = card.dataset.severity;
+      let statusVal = 'undecided';
+      if (state.skipped.has(id)) statusVal = 'skipped';
+      else if (state.decisions[id]) statusVal = 'decided';
+
+      const { reviewer: rf, severity: sf, status: stf } = state.filters;
+      const show =
+        (rf === 'all' || reviewer === rf) &&
+        (sf === 'all' || severity === sf) &&
+        (stf === 'all' || statusVal === stf);
+
+      card.style.display = show ? 'block' : 'none';
+    });
+  }
+
+  // ── RENDER CARDS ──
+  function renderCards() {
+    const container = document.getElementById('cards-container');
+    container.innerHTML = '';
+
+    // Group by reviewer
+    const groups = {};
+    state.suggestions.forEach(s => {
+      const r = s.reviewer_id || 'unknown';
+      if (!groups[r]) groups[r] = [];
+      groups[r].push(s);
+    });
+
+    Object.entries(groups).forEach(([reviewer, items]) => {
+      const section = document.createElement('div');
+      section.className = 'reviewer-section';
+      section.dataset.reviewer = reviewer;
+
+      const title = document.createElement('div');
+      title.className = 'reviewer-section-title';
+      title.textContent = REVIEWER_LABELS[reviewer] || reviewer;
+      section.appendChild(title);
+
+      items.forEach(s => {
+        section.appendChild(buildCard(s));
+      });
+
+      container.appendChild(section);
+    });
+  }
+
+  function buildCard(s) {
+    const id = s.id || s.suggestion_id || (s.reviewer_id + '-' + Math.random().toString(36).slice(2));
+    s._id = id; // ensure consistent id
+
+    const card = document.createElement('div');
+    card.className = 'suggestion-card';
+    card.dataset.id = id;
+    card.dataset.reviewer = s.reviewer_id || 'unknown';
+    card.dataset.severity = s.severity || 'minor';
+
+    // HEADER
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    header.innerHTML = `
+      <span class="tag tag-${s.reviewer_id || 'content'}">${REVIEWER_LABELS[s.reviewer_id] || s.reviewer_id || '审查'}</span>
+      <span class="tag tag-${s.severity || 'minor'}">${s.severity || 'minor'}</span>
+      <span class="card-dimension">${s.dimension || s.category || '—'}</span>
+      <span class="card-status-icon" data-status="${id}"></span>
+      <span class="collapse-arrow">▾</span>
+    `;
+    header.addEventListener('click', () => {
+      card.classList.toggle('collapsed');
+    });
+    card.appendChild(header);
+
+    // BODY
+    const body = document.createElement('div');
+    body.className = 'card-body';
+
+    // Source line
+    if (s.source_lines || s.lines) {
+      const lines = s.source_lines || s.lines;
+      const srcDiv = document.createElement('div');
+      srcDiv.className = 'source-line';
+      if (Array.isArray(lines)) {
+        srcDiv.textContent = `slide-content.md 第 ${lines[0]}–${lines[lines.length-1]} 行`;
+      } else if (typeof lines === 'object' && lines.start !== undefined) {
+        srcDiv.textContent = `slide-content.md 第 ${lines.start}–${lines.end} 行`;
+      } else {
+        srcDiv.textContent = `slide-content.md 第 ${lines} 行`;
+      }
+      body.appendChild(srcDiv);
+    }
+
+    // Original content
+    if (s.original || s.content || s.text) {
+      const orig = document.createElement('pre');
+      orig.className = 'original-content';
+      orig.textContent = s.original || s.content || s.text;
+      body.appendChild(orig);
+    }
+
+    // Divider
+    const divider = document.createElement('hr');
+    divider.className = 'card-divider';
+    body.appendChild(divider);
+
+    // Options
+    const options = s.options || s.choices || [];
+    if (options.length) {
+      const grid = document.createElement('div');
+      grid.className = 'options-grid';
+
+      options.forEach((opt, idx) => {
+        const label = String.fromCharCode(65 + idx); // A, B, C...
+        const optCard = document.createElement('div');
+        optCard.className = 'option-card';
+        optCard.dataset.choice = label;
+
+        let html = `
+          <div class="option-header">
+            <span class="option-label">${label}</span>
+            <span class="option-desc">${escHtml(opt.description || opt.desc || opt.label || label)}</span>
+            ${opt.recommended ? '<span class="option-recommended">★ 推荐</span>' : ''}
+          </div>
+        `;
+        if (opt.content || opt.text || opt.value) {
+          html += `<pre class="option-content">${escHtml(opt.content || opt.text || opt.value)}</pre>`;
+        }
+        if (opt.recommended && opt.reason) {
+          html += `<div class="option-reason">${escHtml(opt.reason)}</div>`;
+        }
+        optCard.innerHTML = html;
+
+        optCard.addEventListener('click', () => {
+          // Deselect others in this card
+          grid.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+          optCard.classList.add('selected');
+          // Store pending choice
+          optCard.closest('.suggestion-card')._pendingChoice = label;
+          // Enable confirm button
+          const confirmBtn = card.querySelector('.btn-confirm');
+          if (confirmBtn) confirmBtn.disabled = false;
+        });
+
+        grid.appendChild(optCard);
+      });
+
+      body.appendChild(grid);
+    }
+
+    // Custom option
+    const customToggle = document.createElement('button');
+    customToggle.className = 'custom-toggle';
+    customToggle.textContent = '+ 自定义';
+    body.appendChild(customToggle);
+
+    const customArea = document.createElement('div');
+    customArea.className = 'custom-area';
+    const customTA = document.createElement('textarea');
+    customTA.className = 'custom-textarea';
+    customTA.placeholder = '输入自定义修改内容…';
+    const customConfirmBtn = document.createElement('button');
+    customConfirmBtn.className = 'custom-confirm-btn';
+    customConfirmBtn.textContent = '使用此内容';
+    customArea.appendChild(customTA);
+    customArea.appendChild(customConfirmBtn);
+    body.appendChild(customArea);
+
+    customToggle.addEventListener('click', () => {
+      customArea.classList.toggle('open');
+      customToggle.textContent = customArea.classList.contains('open') ? '− 自定义' : '+ 自定义';
+    });
+
+    customConfirmBtn.addEventListener('click', () => {
+      const val = customTA.value.trim();
+      if (!val) return;
+      card._pendingChoice = 'custom';
+      card._customContent = val;
+      // Deselect all option cards
+      card.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+      // Visual feedback
+      customConfirmBtn.textContent = '✓ 已选择自定义内容';
+      customConfirmBtn.style.background = '#f0f0f0';
+      const confirmBtn = card.querySelector('.btn-confirm');
+      if (confirmBtn) confirmBtn.disabled = false;
+    });
+
+    // Note
+    const noteArea = document.createElement('div');
+    noteArea.className = 'note-area';
+    const noteTA = document.createElement('textarea');
+    noteTA.className = 'note-textarea';
+    noteTA.placeholder = '添加备注…';
+    noteTA.rows = 1;
+    noteArea.appendChild(noteTA);
+    body.appendChild(noteArea);
+
+    // Actions
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    const skipBtn = document.createElement('button');
+    skipBtn.className = 'btn-skip';
+    skipBtn.textContent = '跳过';
+    skipBtn.addEventListener('click', () => {
+      state.skipped.add(id);
+      delete state.decisions[id];
+      card.classList.remove('decided');
+      card.classList.add('skipped');
+      updateStatusIcon(id, 'skipped');
+      updateProgress();
+      applyFilters();
+    });
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn-confirm';
+    confirmBtn.textContent = '确认选择';
+    confirmBtn.disabled = true;
+    confirmBtn.addEventListener('click', () => {
+      const choice = card._pendingChoice;
+      if (!choice) return;
+      const customContent = choice === 'custom' ? (card._customContent || '') : '';
+      state.decisions[id] = {
+        suggestion_id: id,
+        choice: choice,
+        custom_content: customContent,
+        note: noteTA.value.trim()
+      };
+      state.skipped.delete(id);
+      card.classList.add('decided');
+      card.classList.remove('skipped');
+      // Auto-collapse after decision
+      card.classList.add('collapsed');
+      updateStatusIcon(id, 'decided');
+      updateProgress();
+      applyFilters();
+    });
+
+    actions.appendChild(skipBtn);
+    actions.appendChild(confirmBtn);
+    body.appendChild(actions);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  function updateStatusIcon(id, status) {
+    const el = document.querySelector(`[data-status="${id}"]`);
+    if (!el) return;
+    if (status === 'decided') { el.textContent = '✓'; el.style.color = '#4caf50'; }
+    else if (status === 'skipped') { el.textContent = '—'; el.style.color = '#bbb'; }
+    else { el.textContent = ''; }
+  }
+
+  function updateProgress() {
+    const total = state.suggestions.length;
+    const decided = Object.keys(state.decisions).length + state.skipped.size;
+    const pct = total ? Math.round(decided / total * 100) : 0;
+    document.getElementById('progress-text').textContent = `已决策 ${decided} / 共 ${total} 条`;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('btn-export').disabled = decided === 0;
+  }
+
+  // ── EXPORT ──
+  function exportDecisions() {
+    const ts = new Date().toISOString();
+    const tsSlug = ts.replace(/[:.]/g, '-').slice(0, 19);
+    const allDecisions = [];
+
+    state.suggestions.forEach(s => {
+      const id = s._id;
+      if (state.skipped.has(id)) {
+        allDecisions.push({ suggestion_id: id, choice: 'skip', custom_content: '', note: '' });
+      } else if (state.decisions[id]) {
+        allDecisions.push(state.decisions[id]);
+      }
+    });
+
+    const output = {
+      schema_version: '1.0',
+      slug: state.slug,
+      ts: ts,
+      decisions: allDecisions
+    };
+
+    const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `review-decisions-${tsSlug}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Show notice
+    const notice = document.getElementById('export-notice');
+    const noticePath = document.getElementById('notice-path');
+    noticePath.textContent = `~/.pptdog/projects/${state.slug}/review-decisions-${tsSlug}.json`;
+    notice.classList.add('visible');
+    notice.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ── HELPERS ──
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>

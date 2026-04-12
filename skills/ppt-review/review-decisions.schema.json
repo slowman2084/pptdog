@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReviewDecisions",
+  "type": "object",
+  "required": ["schema_version", "slug", "ts", "decisions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "slug": { "type": "string" },
+    "ts": { "type": "string" },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["suggestion_id", "choice"],
+        "additionalProperties": false,
+        "properties": {
+          "suggestion_id": { "type": "string" },
+          "choice": { "type": "string", "enum": ["A","B","C","D","E","custom","skip"] },
+          "custom_content": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}
