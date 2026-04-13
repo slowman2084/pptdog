@@ -71,9 +71,9 @@ fi
 # 5. 扫描 references/ 目录
 REFS_DIR="$HOME/.pptdog/projects/$SLUG/references"
 if [ -d "$REFS_DIR" ]; then
-  echo "=== references/ 目录内容 ==="
-  ls -la "$REFS_DIR" 2>/dev/null | grep -E "\.(png|jpg|jpeg|webp|gif|svg)$" \
-    || echo "(目录存在但暂无图片)"
+  echo "=== references/ 素材库内容 ==="
+  ls -la "$REFS_DIR" 2>/dev/null | grep -v "^total\|^\.\|^d" \
+    || echo "(目录存在但暂无素材)"
 else
   echo "references/ 目录不存在（可手动创建：mkdir -p $REFS_DIR）"
 fi
@@ -89,7 +89,8 @@ fi
 👥 听众：<听众描述>
 🎯 演讲类型：<分享型 | 汇报型>
 📝 已有 details.md：<是 / 否>
-🖼  references/ 图片：<N> 张（[列出文件名]）
+📁  references/ 素材库：<N> 个文件（[列出文件名及类型]）
+    图片：<N> 张 | 文字素材：<N> 份 | 数据文件：<N> 份 | 其他：<N> 份
 ```
 
 如果 mindmap.md 不存在，**立即停止**并提示：
@@ -222,10 +223,11 @@ AI 帮结构化为以下格式：
 **结果（Result）：**
 [量化数字 + 情景细节，听众能感受到"哦，真的解决了"]
 
-**参考图片：**
-[若 references/ 中有相关图片，AI 主动提示：「references/ 目录中有 [文件名]，这张图是否用于支撑这个案例？」]
-- 若是 → 在这里记录：`![描述](references/文件名)`
-- 若否 → 记录 `（暂无配图，如有相关截图可放入 references/ 目录）`
+**参考素材：**
+[若 references/ 中有相关文件，AI 主动提示：「references/ 目录中有 [文件名]（[类型]），是否用于支撑这个论点？」]
+- 图片类 → 记录：`![描述](references/文件名)`（PPT 配图用）
+- 文字/数据类 → 记录：`[素材描述](references/文件名)`（案例细节/数据来源）
+- 若否 → 记录 `（暂无素材，如有相关截图/文档/数据可放入 references/ 目录）`
 ```
 
 然后做**空姐效应检查**：
@@ -350,13 +352,13 @@ E. 这个成果不需要额外证明（说明理由）
 > 💡 评委看到监控截图的那一刻，质疑会直接消失。10分钟找一张截图，比口头解释30分钟有效。
 
 **若选 A / B / C：**
-> 「请把截图保存到 `~/.pptdog/projects/<slug>/references/` 目录下。
-> 建议命名：`monitor-[描述]-[论点编号].png` 或 `proof-[描述]-[论点编号].png`
-> 保存后告诉我文件名，我会记录到这个论点的 details.md 里。」
+> 「请把相关文件（截图/数据表/案例文档等）保存到 `~/.pptdog/projects/<slug>/references/` 目录下。
+> 支持：图片（.png/.jpg）、文档（.md/.txt/.docx）、数据（.csv/.xlsx）、PDF
+> 保存后告诉我文件名，我会记录到这个论点里。」
 
-收到文件名后，在该论点的「参考图片」字段里记录：
+收到文件名后，在该论点的「参考素材」字段里记录：
 ```markdown
-**参考图片：**
+**参考素材：**
 - `![监控截图](references/monitor-xxx.png)` — 证明成果真实性（SLO = 99.99%，截至XXXX年）
 ```
 
@@ -436,9 +438,9 @@ E. 这个成果不需要额外证明（说明理由）
 **深度笔记：**
 <自检过程中补充的 Why、推导逻辑、授人以渔要点>
 
-**参考图片：**
+**参考素材：**
 - `![描述](references/文件名)` — [说明这张图用在哪、证明什么]
-- （无图时写：暂无配图）
+- （无素材时写：暂无素材）
 
 **汇报型补充：**（仅汇报型）
 - 成果表述：...

@@ -384,18 +384,20 @@ AI 识别该章节用的是哪种推理方式，并检查是否执行到位：
 
 ```bash
 REFS_DIR="$HOME/.pptdog/projects/$SLUG/references"
-ls "$REFS_DIR" 2>/dev/null | grep -E "\.(png|jpg|jpeg|webp|gif|svg)$" || echo "(无图片)"
+ls "$REFS_DIR" 2>/dev/null | grep -v "^\." || echo "(无素材文件)"
 ```
 
 AI 读取 references/ 文件列表 + slide-content.md 中的图片引用，生成对照表：
 
 ```
-图片文件                | 在 slide-content 中的引用状态 | 建议
-----------------------|------------------------------|------
-monitor-slo.png       | ✅ 已引用（Slide 3）           | —
-arch-overview.png     | ⚠️ 未引用                     | 论点 2.1「架构优化」可配此图
-style-ref.jpg         | ℹ️ 风格参考，不需要引用        | —
-（无文件）             | ❓ 论点 1.3「数据对比」建议配图 | 可截图放入 references/
+素材文件                | 类型       | 在 slide-content 中的引用状态 | 建议
+----------------------|-----------|------------------------------|------
+monitor-slo.png       | 图片（配图）| ✅ 已引用（Slide 3）           | —
+arch-overview.png     | 图片（配图）| ⚠️ 未引用                     | 论点 2.1「架构优化」可配此图
+case-postmortem.md    | 文字（案例）| ⚠️ 未引用                     | 论点 1.2「故障复盘」演讲口头说可引用此文档的细节
+metrics-2024q3.csv    | 数据       | ✅ 已引用（Slide 5 数字来源）   | —
+style-ref.jpg         | 风格参考   | ℹ️ 风格参考，不需要引用         | —
+（无文件）             | —         | ❓ 论点 1.3 建议提供素材        | 可截图/写案例文档放入 references/
 ```
 
 **生成 suggestion 的触发条件：**
