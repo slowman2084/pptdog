@@ -87,16 +87,20 @@ PREV_COUNT=$(ls "$HOME/.pptdog/projects/$SLUG/review-suggestions/" 2>/dev/null |
 
 ---
 
-## Step 1：触发三个审查子 skill
+## Step 1：触发七个审查子 skill
 
 AI 说明：
 
-> 正在启动三个专项审查器，并行审查（通常 1-2 分钟）……
+> 正在启动七个专项审查器，并行审查（通常 2-3 分钟）……
 
 ```
-🔍 内容审查器 (review-content)   — 空姐效应 / 论点深度 / 真实案例 / Why层
-🔍 结构审查器 (review-structure) — 开关门 / 章节逻辑 / 叙事弧度
-🔍 演讲审查器 (review-delivery)  — 主语 / 口语化 / 时长 / 背稿风险
+🔍 内容审查器     (review-content)   — 空姐效应 / 论点深度 / 真实案例 / Why层 / 数字证据
+🔍 结构审查器     (review-structure) — 开关门 / 章节逻辑 / 叙事弧度 / 时长匹配
+🔍 演讲审查器     (review-delivery)  — 主语 / 口语化 / 时长 / 背稿风险
+🔍 逻辑完整性     (review-logic)     — 推理链条 / MECE / 隐含假设 / 金字塔全局视角
+🔍 演讲技巧机会   (review-craft)     — 递进式深挖 / Call Back / 暗线 / 方法论楔子
+🔍 四文件同步     (review-sync)      — ppt-hours/mindmap/details/slide-content 一致性检查
+🔍 布局质量       (review-layout)    — 布局与内容匹配 / 多样性 / 关键页面布局
 ```
 
 **调用指令（AI 执行）：**
@@ -105,20 +109,32 @@ AI 说明：
 INVOKE_SKILL review-content
 INVOKE_SKILL review-structure
 INVOKE_SKILL review-delivery
+INVOKE_SKILL review-logic
+INVOKE_SKILL review-craft
+INVOKE_SKILL review-sync
+INVOKE_SKILL review-layout
 ```
 
-三个 skill 各自将结果写入 `~/.pptdog/projects/<slug>/review-suggestions/` 目录：
+七个 skill 各自将结果写入 `~/.pptdog/projects/<slug>/review-suggestions/` 目录：
 - `content-<ts>.json`
 - `structure-<ts>.json`
 - `delivery-<ts>.json`
+- `logic-<ts>.json`
+- `craft-<ts>.json`
+- `sync-<ts>.json`
+- `layout-<ts>.json`
 
-等待三个文件均生成后，验证并打印：
+等待七个文件均生成后，验证并打印：
 
 ```
 ✅ 审查完成：
   content-<ts>.json   — <N> 条建议（critical: X / major: X / minor: X）
   structure-<ts>.json — <N> 条建议（critical: X / major: X / minor: X）
   delivery-<ts>.json  — <N> 条建议（critical: X / major: X / minor: X）
+  logic-<ts>.json     — <N> 条建议（critical: X / major: X / minor: X）
+  craft-<ts>.json     — <N> 条建议（major: X / minor: X）
+  sync-<ts>.json      — <N> 条建议（major: X / minor: X）
+  layout-<ts>.json    — <N> 条建议（major: X / minor: X）
   共 <总N> 条建议
 ```
 
@@ -129,14 +145,18 @@ INVOKE_SKILL review-delivery
 AI 执行以下 shell 脚本，将三个 JSON 文件数据直接注入到临时 HTML 中，用户打开即可看到所有建议，无需手动选文件：
 
 ```bash
-# 读取三个 JSON 文件内容
+# 读取七个 JSON 文件内容
 REVIEW_DIR="$HOME/.pptdog/projects/$SLUG/review-suggestions"
 CONTENT_JSON=$(ls -t "$REVIEW_DIR"/content-*.json 2>/dev/null | head -1)
 STRUCTURE_JSON=$(ls -t "$REVIEW_DIR"/structure-*.json 2>/dev/null | head -1)
 DELIVERY_JSON=$(ls -t "$REVIEW_DIR"/delivery-*.json 2>/dev/null | head -1)
+LOGIC_JSON=$(ls -t "$REVIEW_DIR"/logic-*.json 2>/dev/null | head -1)
+CRAFT_JSON=$(ls -t "$REVIEW_DIR"/craft-*.json 2>/dev/null | head -1)
+SYNC_JSON=$(ls -t "$REVIEW_DIR"/sync-*.json 2>/dev/null | head -1)
+LAYOUT_JSON=$(ls -t "$REVIEW_DIR"/layout-*.json 2>/dev/null | head -1)
 
 # 检查文件存在
-for f in "$CONTENT_JSON" "$STRUCTURE_JSON" "$DELIVERY_JSON"; do
+for f in "$CONTENT_JSON" "$STRUCTURE_JSON" "$DELIVERY_JSON" "$LOGIC_JSON" "$CRAFT_JSON" "$SYNC_JSON" "$LAYOUT_JSON"; do
   [ -f "$f" ] || { echo "⛔ 缺少审查文件：$f"; exit 1; }
 done
 
@@ -147,40 +167,38 @@ TEMPLATE="$HOME/.pptdog/tools/review-dashboard.html"
 # 生成临时 HTML（注入数据到 window.__PPTDOG_DATA__）
 TMP_HTML="/tmp/pptdog-review-${SLUG}.html"
 
-# 把三个 JSON 的内容读出来，注入到 <head> 里
-CONTENT_DATA=$(cat "$CONTENT_JSON")
-STRUCTURE_DATA=$(cat "$STRUCTURE_JSON")
-DELIVERY_DATA=$(cat "$DELIVERY_JSON")
-
 # 在模板 HTML 的 <head> 结束标签前插入数据注入脚本
 python3 - "$TEMPLATE" "$TMP_HTML" <<PYEOF
-import sys, re
+import sys, json, os, glob
+
 template_path, out_path = sys.argv[1], sys.argv[2]
 with open(template_path, 'r', encoding='utf-8') as f:
     html = f.read()
 
-# Read JSON data
-import json, os
 review_dir = os.path.expanduser('$REVIEW_DIR')
-slugname = '$SLUG'
 
-import glob
-content_file  = sorted(glob.glob(os.path.join(review_dir, 'content-*.json')))[-1]
-structure_file = sorted(glob.glob(os.path.join(review_dir, 'structure-*.json')))[-1]
-delivery_file  = sorted(glob.glob(os.path.join(review_dir, 'delivery-*.json')))[-1]
+def load_latest(pattern):
+    files = sorted(glob.glob(os.path.join(review_dir, pattern)))
+    if not files: return {}
+    with open(files[-1]) as f: return json.load(f)
 
-with open(content_file)  as f: content_data  = json.load(f)
-with open(structure_file) as f: structure_data = json.load(f)
-with open(delivery_file)  as f: delivery_data  = json.load(f)
+all_data = [
+    load_latest('content-*.json'),
+    load_latest('structure-*.json'),
+    load_latest('delivery-*.json'),
+    load_latest('logic-*.json'),
+    load_latest('craft-*.json'),
+    load_latest('sync-*.json'),
+    load_latest('layout-*.json'),
+]
 
 inject = (
     '<script>\n'
     'window.__PPTDOG_DATA__ = ' +
-    json.dumps([content_data, structure_data, delivery_data], ensure_ascii=False) +
+    json.dumps(all_data, ensure_ascii=False) +
     ';\n</script>\n'
 )
 
-# Insert before </head>
 html = html.replace('</head>', inject + '</head>', 1)
 
 with open(out_path, 'w', encoding='utf-8') as f:
@@ -332,20 +350,36 @@ B. 否，我先看看修改结果，稍后再审查
 
 ## 附录：审查维度速查
 
-三个子审查器各自负责的维度参考表（详细规则见各子 skill 的 SKILL.md）：
+七个子审查器各自负责的维度参考表（详细规则见各子 skill 的 SKILL.md）：
 
-| 审查器     | 维度         | 说明                               |
-|------------|-------------|-----------------------------------|
-| content    | 空姐效应     | PPT 上是否有需要读的内容            |
-| content    | Why 层覆盖   | 每个论点有没有解释为什么            |
-| content    | 真实案例     | 案例是否完整（背景/冲突/解决/结果） |
-| content    | 假问题识别   | 问题描述是否用了"不/没/非"          |
-| content    | 授人以渔     | 是否有可复用的方法论                |
-| structure  | 大开门       | 前30秒是否有钩子                   |
-| structure  | 大关门       | 结尾是否有升华和可复述结论          |
-| structure  | 章节小开关门 | 每章是否有小钩子+结论固化           |
-| structure  | 叙事弧度     | 一波三折/金字塔原理是否完整         |
-| delivery   | 主语检查     | 演讲稿里"我们"→"我"                |
-| delivery   | 口语化       | 能不看稿直接讲出来吗                |
-| delivery   | 时长估算     | 字数估算是否匹配目标时长            |
-| delivery   | 背稿风险     | 口头说是否超过200字                 |
+| 审查器         | 维度           | 说明                                     |
+|---------------|---------------|------------------------------------------|
+| content        | 空姐效应       | PPT 上是否有需要读的内容                  |
+| content        | Why 层覆盖     | 每个论点有没有解释为什么                  |
+| content        | 真实案例       | 案例是否完整（背景/冲突/解决/结果）       |
+| content        | 假问题识别     | 问题描述是否用了"不/没/非"                |
+| content        | 授人以渔       | 是否有可复用的方法论                      |
+| content        | 数字/证据      | 重要论点是否有数字支撑                    |
+| structure      | 大开门         | 前30秒是否有钩子                         |
+| structure      | 大关门         | 结尾是否有升华和可复述结论                |
+| structure      | 章节小开关门   | 每章是否有小钩子+结论固化                 |
+| structure      | 叙事弧度       | 一波三折/金字塔原理是否完整               |
+| delivery       | 主语检查       | 演讲稿里"我们"→"我"                      |
+| delivery       | 口语化         | 能不看稿直接讲出来吗                      |
+| delivery       | 时长估算       | 字数估算是否匹配目标时长                  |
+| delivery       | 背稿风险       | 口头说是否超过200字                       |
+| logic          | 推理链条       | 演绎/归纳/溯因推理是否完整                |
+| logic          | MECE           | 同层论点有无重叠/遗漏                     |
+| logic          | 隐含假设       | 论点是否依赖未建立的假设                  |
+| logic          | 金字塔全局     | 各章论点合力支撑顶层结论了吗              |
+| craft          | 递进式深挖     | 论点是否停在表层，可以做成2-3页递进       |
+| craft          | Call Back      | 开门素材是否在后面被回扣                  |
+| craft          | 暗线           | 是否有贯穿全场的隐性线索机会              |
+| craft          | 方法论楔子     | 关门是否给听众可带走的工具+延伸讨论入口   |
+| sync           | ppt-hours匹配  | 听众期待与 slide-content 是否一致         |
+| sync           | mindmap-details| mindmap 论点与 details 内容是否同步       |
+| sync           | details-slide  | details 内容与 slide-content 是否对应     |
+| sync           | 全局快照       | 四文件一致性总览表                        |
+| layout         | 布局匹配       | 布局类型是否与内容类型匹配                |
+| layout         | 布局多样性     | 是否过度使用 bullet_list                  |
+| layout         | 关键页面布局   | 封面/封底/章节分隔是否使用专用布局         |
