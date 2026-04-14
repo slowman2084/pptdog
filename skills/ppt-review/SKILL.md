@@ -124,25 +124,82 @@ INVOKE_SKILL review-delivery
 
 ---
 
-## Step 2：打开 Review Dashboard
+## Step 2：生成预装载 Dashboard 并打开
 
-AI 执行以下操作，引导用户使用 Dashboard 做决策：
+AI 执行以下 shell 脚本，将三个 JSON 文件数据直接注入到临时 HTML 中，用户打开即可看到所有建议，无需手动选文件：
 
 ```bash
-# 获取 tools 目录中的 HTML 路径
-DASHBOARD="$HOME/.pptdog/tools/review-dashboard.html"
-[ -f "$DASHBOARD" ] || DASHBOARD="$(dirname $(which pptdog-update-check))/../tools/review-dashboard.html"
+# 读取三个 JSON 文件内容
+REVIEW_DIR="$HOME/.pptdog/projects/$SLUG/review-suggestions"
+CONTENT_JSON=$(ls -t "$REVIEW_DIR"/content-*.json 2>/dev/null | head -1)
+STRUCTURE_JSON=$(ls -t "$REVIEW_DIR"/structure-*.json 2>/dev/null | head -1)
+DELIVERY_JSON=$(ls -t "$REVIEW_DIR"/delivery-*.json 2>/dev/null | head -1)
 
-# macOS 自动打开
-open "$DASHBOARD" 2>/dev/null || \
-  xdg-open "$DASHBOARD" 2>/dev/null || \
-  echo "请手动打开：$DASHBOARD"
+# 检查文件存在
+for f in "$CONTENT_JSON" "$STRUCTURE_JSON" "$DELIVERY_JSON"; do
+  [ -f "$f" ] || { echo "⛔ 缺少审查文件：$f"; exit 1; }
+done
+
+# 模板 HTML 路径
+TEMPLATE="$HOME/.pptdog/tools/review-dashboard.html"
+[ -f "$TEMPLATE" ] || { echo "⛔ 未找到 review-dashboard.html"; exit 1; }
+
+# 生成临时 HTML（注入数据到 window.__PPTDOG_DATA__）
+TMP_HTML="/tmp/pptdog-review-${SLUG}.html"
+
+# 把三个 JSON 的内容读出来，注入到 <head> 里
+CONTENT_DATA=$(cat "$CONTENT_JSON")
+STRUCTURE_DATA=$(cat "$STRUCTURE_JSON")
+DELIVERY_DATA=$(cat "$DELIVERY_JSON")
+
+# 在模板 HTML 的 <head> 结束标签前插入数据注入脚本
+python3 - "$TEMPLATE" "$TMP_HTML" <<PYEOF
+import sys, re
+template_path, out_path = sys.argv[1], sys.argv[2]
+with open(template_path, 'r', encoding='utf-8') as f:
+    html = f.read()
+
+# Read JSON data
+import json, os
+review_dir = os.path.expanduser('$REVIEW_DIR')
+slugname = '$SLUG'
+
+import glob
+content_file  = sorted(glob.glob(os.path.join(review_dir, 'content-*.json')))[-1]
+structure_file = sorted(glob.glob(os.path.join(review_dir, 'structure-*.json')))[-1]
+delivery_file  = sorted(glob.glob(os.path.join(review_dir, 'delivery-*.json')))[-1]
+
+with open(content_file)  as f: content_data  = json.load(f)
+with open(structure_file) as f: structure_data = json.load(f)
+with open(delivery_file)  as f: delivery_data  = json.load(f)
+
+inject = (
+    '<script>\n'
+    'window.__PPTDOG_DATA__ = ' +
+    json.dumps([content_data, structure_data, delivery_data], ensure_ascii=False) +
+    ';\n</script>\n'
+)
+
+# Insert before </head>
+html = html.replace('</head>', inject + '</head>', 1)
+
+with open(out_path, 'w', encoding='utf-8') as f:
+    f.write(html)
+
+print('OK')
+PYEOF
 
 echo ""
-echo "📂 审查结果文件目录：$HOME/.pptdog/projects/$SLUG/review-suggestions/"
+echo "✅ Dashboard 已生成：$TMP_HTML"
+
+# 打开浏览器
+open "$TMP_HTML" 2>/dev/null || \
+  xdg-open "$TMP_HTML" 2>/dev/null || \
+  echo "请手动打开：$TMP_HTML"
+
 echo ""
 echo "操作步骤："
-echo "  1. 在浏览器中选择上方目录的 3 个 JSON 文件"
+echo "  1. 浏览器已打开，所有建议已自动加载（无需手动选文件）"
 echo "  2. 对每条建议选择 A/B/C 或自定义"
 echo "  3. 点击「导出决策文件」下载 review-decisions-<ts>.json"
 echo "  4. 将文件保存到：$HOME/.pptdog/projects/$SLUG/"

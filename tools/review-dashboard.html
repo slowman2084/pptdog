@@ -679,6 +679,18 @@
   const SEV_ORDER = { critical: 0, major: 1, minor: 2 };
   const REVIEWER_LABELS = { content: '内容', structure: '结构', delivery: '演讲' };
 
+  // ── AUTO-LOAD INJECTED DATA ──
+  // If the HTML was generated with pre-injected data (window.__PPTDOG_DATA__),
+  // skip the file picker and load directly.
+  if (typeof window.__PPTDOG_DATA__ !== 'undefined' && window.__PPTDOG_DATA__.length) {
+    document.addEventListener('DOMContentLoaded', function() {
+      // Hide the drop zone since we have data already
+      const dz = document.getElementById('drop-zone');
+      if (dz) dz.style.display = 'none';
+      processData(window.__PPTDOG_DATA__);
+    });
+  }
+
   // ── FILE INPUT SETUP ──
   document.getElementById('file-input').addEventListener('change', function(e) {
     handleFiles(Array.from(e.target.files));
