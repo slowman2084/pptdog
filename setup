@@ -305,14 +305,18 @@ check_ppt_backends() {
   header "检测 PPT 生成 Backend"
 
   local found_any=false
+  local pro_found=false
 
-  # 1. 检测 NanoBanana PPT Skills
-  local nano_found=false
+  # 1. 检测 ppt-generator-pro（默认推荐）和其他 PPT skill
   for base_dir in "$HOME/.claude" "$HOME/.codex" "$HOME/.openclaw" "$HOME/.codebuddy" "$HOME/.cursor" "$HOME/.agents"; do
-    for skill_name in nanobanana-ppt-skills pptx-generation pptx; do
+    for skill_name in ppt-generator-pro nanobanana-ppt-skills pptx-generation pptx; do
       if [[ -d "$base_dir/skills/$skill_name" ]]; then
-        success "PPT skill 已安装：${BOLD}$skill_name${RESET}  ${DIM}→ $base_dir/skills/$skill_name${RESET}"
-        nano_found=true
+        if [[ "$skill_name" == "ppt-generator-pro" ]]; then
+          success "PPT skill 已安装：${BOLD}$skill_name${RESET} ⭐ 默认推荐  ${DIM}→ $base_dir/skills/$skill_name${RESET}"
+          pro_found=true
+        else
+          success "PPT skill 已安装：${BOLD}$skill_name${RESET}  ${DIM}→ $base_dir/skills/$skill_name${RESET}"
+        fi
         found_any=true
       fi
     done
@@ -330,11 +334,16 @@ check_ppt_backends() {
   # 3. 综合提示
   echo ""
   if [[ "$found_any" == true ]]; then
-    info "/gen-slides 时将自动检测以上 backend 并推荐最佳选项"
+    if [[ "$pro_found" == true ]]; then
+      info "/gen-slides 默认使用 ppt-generator-pro + pptx 两步串联生成 .pptx"
+    else
+      info "/gen-slides 时将自动检测以上 backend 并推荐最佳选项"
+    fi
   else
     warn "未检测到任何 PPT 生成 backend，/gen-slides 暂时只能生成 Markdown 规划"
     echo -e "  推荐选一个安装："
-    echo -e "    ${CYAN}NanoBanana PPT Skills${RESET}（推荐，AI 代码编辑器专用）"
+    echo -e "    ${CYAN}ppt-generator-pro${RESET}（默认推荐，支持参考图风格 + .pptx 输出）"
+    echo -e "    ${CYAN}NanoBanana PPT Skills${RESET}（AI 代码编辑器专用）"
     echo -e "      → https://github.com/op7418/NanoBanana-PPT-Skills"
     echo -e "    ${CYAN}uv pip install python-pptx${RESET}（内置 backend，简单直接）"
   fi

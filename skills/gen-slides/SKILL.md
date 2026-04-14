@@ -139,7 +139,7 @@ AI 根据检测结果设置 `HAS_TEMPLATE` 标志，影响后续推荐逻辑：
 # 检查常见 skill 安装路径（Claude Code / Codex / OpenClaw / CodeBuddy / Cursor）
 # 每个 IDE 目录 × 已知 skill 名称
 for base_dir in ~/.claude ~/.codex ~/.openclaw ~/.codebuddy ~/.cursor ~/.agents; do
-  for skill_name in pptx pptx-generation nanobanana-ppt-skills; do
+  for skill_name in pptx pptx-generation nanobanana-ppt-skills ppt-generator-pro; do
     skill_dir="$base_dir/skills/$skill_name"
     [ -d "$skill_dir" ] && echo "FOUND_SKILL: $skill_dir ($skill_name)"
   done
@@ -160,34 +160,51 @@ command -v soffice 2>/dev/null && echo "FOUND: libreoffice (soffice)"
 
 ### 1-C：汇总可用 Backend（动态推荐逻辑）
 
-AI 根据 `HAS_TEMPLATE` + 已安装工具 + **NanoBanana 是否安装**，动态决定推荐项。
+AI 根据 `HAS_TEMPLATE` + 已安装工具 + **ppt-generator-pro 和 NanoBanana 是否安装**，动态决定推荐项。
 
-> **NanoBanana PPT Skills** 是专为 AI 代码编辑器（Claude Code / Cursor / Codex 等）设计的 PPT 生成 skill，支持通过参考图片指定视觉风格，生成效果更接近设计师水准。
+> **ppt-generator-pro** 是默认推荐的 PPT 生成 skill。工作流：
+> 1. 先用 ppt-generator-pro 生成每页的 **图片（PNG）**，支持通过参考图指定风格
+> 2. 再用 `pptx` skill 把图片打包成 **标准 .pptx 文件**，可用 PPT/Keynote/WPS 打开
+>
+> **使用示例：**
+> ```
+> /gen-slides 参考风格图.png [默认] ppt-generator-pro skill
+> ```
+> 不提供参考图时，AI 会询问风格偏好（简约/商务/技术/活泼）并给 2-3 个示例让用户选。
+>
+> **NanoBanana PPT Skills** 是专为 AI 代码编辑器（Claude Code / Cursor / Codex 等）设计的 PPT 生成 skill，也支持通过参考图片指定视觉风格。
 > 项目地址：https://github.com/op7418/NanoBanana-PPT-Skills
 
-**当 NanoBanana 已安装（最高优先级）：**
+**当 ppt-generator-pro 已安装（默认推荐）：**
 
 ```
-🎨 检测到 NanoBanana PPT Skills！
+🎨 检测到 ppt-generator-pro！
 
-  ⭐ NanoBanana PPT Skills（推荐）
-     → 专为 AI 代码编辑器设计，生成效果最接近设计师水准
-     → 支持通过参考图片指定视觉风格（例如：截一张你喜欢的 PPT 风格图）
-     → 配合 .pptx 模板使用效果更佳
+  ⭐ ppt-generator-pro + pptx  ← 默认推荐（两步串联：图片→.pptx）
+     步骤1：ppt-generator-pro 根据 slide-content.md 生成每页图片（PNG）
+     步骤2：pptx skill 把图片打包成标准 .pptx 文件
+     → 支持通过参考图指定视觉风格
+     → 最终产物是可编辑的 .pptx 文件
 ```
 
-若 NanoBanana 已安装，AI 额外提问：
+若 ppt-generator-pro 已安装，AI 额外提问：
 
 **Qg-style：是否提供参考图来指定视觉风格？**
 
 ```
 A. 提供参考图（截一张你喜欢的 PPT 风格截图，或任意风格参考图）  ← 推荐
-   → AI 会基于参考图的配色、排版风格生成 PPT
-B. 使用 NanoBanana 默认风格，不指定参考图
+   → AI 会基于参考图的配色、排版风格生成 PPT 图片
+
+B. 不提供参考图，选择预设风格：
+   B1. 简约商务（深色标题 + 白底 + 少量图表）
+   B2. 技术分享（代码风 + 暗色调 + 等宽字体）
+   B3. 活泼分享（饱和色 + 大图 + 现代排版）
+   → AI 展示 2-3 张风格示例让用户确认
+
 C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
 ```
 
-> 💡 参考图不需要是 PPT 截图，任何你觉得"这个视觉风格我喜欢"的图片都可以——例如某个品牌的设计、某张海报、某个 APP 界面截图。NanoBanana 会分析其中的色彩、排版逻辑并迁移到你的 PPT 上。
+> 💡 参考图不需要是 PPT 截图，任何你觉得"这个视觉风格我喜欢"的图片都可以——品牌设计、海报、APP 界面截图都行。ppt-generator-pro 会分析其中的色彩和排版逻辑并迁移到你的 PPT 上。
 
 ---
 
@@ -218,14 +235,15 @@ C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
 
 🔍 可用的 PPT 生成工具：
 
-  A. NanoBanana PPT Skills ✅ 已安装   ← 强烈推荐（支持参考图风格 + .pptx 模板）
-  B. pptx / pptx-generation ✅ 已安装  （原生支持 .pptx 模板，保留母版/配色/字体）
-  C. python-pptx + 模板    ✅ 已安装   （模板支持，样式控制更灵活）
-  D. Marp                  ✅ 已安装   （不支持 .pptx 模板，使用 Marp 主题）
-  E. 仅导出 Markdown        ✅ 始终可用 （手动导入并套模板）
-  F. 自定义：我有其他工具
+  A. ppt-generator-pro + pptx ✅ 已安装  ← 默认推荐（图片→.pptx 两步串联，支持参考图风格）
+  B. NanoBanana PPT Skills    ✅ 已安装  （支持参考图风格 + .pptx 模板）
+  C. pptx / pptx-generation   ✅ 已安装  （原生支持 .pptx 模板，保留母版/配色/字体）
+  D. python-pptx + 模板       ✅ 已安装  （模板支持，样式控制更灵活）
+  E. Marp                     ✅ 已安装  （不支持 .pptx 模板，使用 Marp 主题）
+  F. 仅导出 Markdown           ✅ 始终可用（手动导入并套模板）
+  G. 自定义：我有其他工具
 
-  ⚠️ 注意：D、E 不能使用你的 .pptx 模板。
+  ⚠️ 注意：E、F 不能使用你的 .pptx 模板。
 ```
 
 **当 `HAS_TEMPLATE=false`（无模板）：**
@@ -233,23 +251,24 @@ C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
 ```
 🔍 可用的 PPT 生成工具：
 
-  A. NanoBanana PPT Skills ✅ 已安装   ← 强烈推荐（参考图驱动风格，效果最好）
-  B. pptx / pptx-generation ✅ 已安装  ← 次选（标准 .pptx，可在 PPT/Keynote/WPS 打开）
-  C. python-pptx           ✅ 已安装   （样式较简单，速度快）
-  D. Marp                  ✅ 已安装   （技术演讲首选，主题丰富）
-  E. 仅导出 Markdown        ✅ 始终可用 （导入 Gamma / Google Slides / Canva）
-  F. 自定义：我有其他工具
+  A. ppt-generator-pro + pptx ✅ 已安装  ← 默认推荐（图片→.pptx 两步串联，支持参考图风格）
+  B. NanoBanana PPT Skills    ✅ 已安装  （参考图驱动风格，效果好）
+  C. pptx / pptx-generation   ✅ 已安装  （标准 .pptx，可在 PPT/Keynote/WPS 打开）
+  D. python-pptx              ✅ 已安装  （样式较简单，速度快）
+  E. Marp                     ✅ 已安装  （技术演讲首选，主题丰富）
+  F. 仅导出 Markdown           ✅ 始终可用（导入 Gamma / Google Slides / Canva）
+  G. 自定义：我有其他工具
 
   💡 没有公司模板？可以放一个 .pptx 模板到 ~/.pptdog/templates/，
      下次会自动检测并优先推荐基于模板的生成方式。
 ```
 
-若没有检测到任何工具（极端情况）：
+若 ppt-generator-pro 和 NanoBanana 都未安装：
 
 ```
-⚠️ 未检测到任何 PPT 生成工具。
-   首选推荐安装 NanoBanana PPT Skills：https://github.com/op7418/NanoBanana-PPT-Skills
-   或直接使用「仅导出 Markdown」选项（E），手动转换。
+⚠️ 未检测到 ppt-generator-pro（默认推荐 skill）。
+   安装方式：在你的 AI 代码编辑器里安装 ppt-generator-pro skill
+   或直接使用「仅导出 Markdown」选项（F），手动转换。
 ```
 
 ---
@@ -257,11 +276,66 @@ C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
 **Qg-1：选择生成 Backend**（AI 动态展示上方结果，标注推荐）
 
 > 💡 **如何选择：**
-> - 想要最好看的视觉效果，可以指定风格参考图 → **A（NanoBanana）**
-> - 有公司 .pptx 模板，要完整保留视觉规范 → **B（pptx skill + 模板）**
-> - 快速出稿，不在意样式 → **C（python-pptx）**
-> - 技术分享，代码多，喜欢 Markdown 流 → **D（Marp）**
-> - 后续在 Gamma / Beautiful.ai 等工具做视觉加工 → **E（Markdown）**
+> - 想要最好看的视觉效果 + 最终要 .pptx 文件 → **A（ppt-generator-pro + pptx，默认推荐）**
+> - 有公司 .pptx 模板，要完整保留视觉规范 → **C（pptx skill + 模板）**
+> - 有参考图风格需求，NanoBanana 已安装 → **B（NanoBanana）**
+> - 快速出稿，不在意样式 → **D（python-pptx）**
+> - 技术分享，代码多，喜欢 Markdown 流 → **E（Marp）**
+> - 后续在 Gamma / Beautiful.ai 等工具做视觉加工 → **F（Markdown）**
+
+---
+
+## Step 1.5：ppt-generator-pro 两步串联流程
+
+> **仅当用户选择 ppt-generator-pro（选项 A）时执行本节。**
+
+### 串联说明
+
+ppt-generator-pro 生成的是**每页图片（PNG/JPG）**，不是 .pptx 文件。
+pptdog 默认在 ppt-generator-pro 完成后，自动调用 `pptx` skill 把图片打包成 .pptx。
+
+**两步流程：**
+```
+Step 1: ppt-generator-pro
+  输入：slide-content.md + 参考风格图（可选）
+  输出：~/.pptdog/projects/<slug>/slides/images/ 目录（每页一张 PNG）
+
+Step 2: pptx skill（自动串联）
+  输入：slides/images/ 目录 + 原始 slides/deck.md（用于幻灯片备注）
+  输出：~/.pptdog/projects/<slug>/slides/deck.pptx
+```
+
+### 执行指令
+
+```
+INVOKE_SKILL ppt-generator-pro
+（等待图片生成完成）
+
+# 检查图片是否生成
+ls ~/.pptdog/projects/$SLUG/slides/images/ 2>/dev/null | wc -l
+
+# 串联调用 pptx skill 打包
+INVOKE_SKILL pptx
+```
+
+### 传递给 ppt-generator-pro 的上下文格式
+
+AI 在调用 ppt-generator-pro 前，按以下格式组织输入：
+
+```
+生成 PPT 图片，使用以下内容和风格要求：
+
+内容文件：~/.pptdog/projects/<slug>/slides/deck.md
+
+风格要求：
+- 参考图：[用户提供的参考图路径，或「无参考图，使用预设风格：简约商务/技术/活泼」]
+- 配色偏好：[从参考图提取，或用户描述]
+- 字体风格：[从参考图提取，或用户描述]
+- 布局密度：[从 slide-content.md 的布局标注推断]
+
+输出路径：~/.pptdog/projects/<slug>/slides/images/
+文件命名：slide-001.png, slide-002.png, ...（按 Slide 顺序）
+```
 
 ---
 
