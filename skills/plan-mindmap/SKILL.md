@@ -838,7 +838,11 @@ EOF
 ```
 ✅ mindmap.md 已保存到 ~/.pptdog/projects/<slug>/mindmap.md
 
-下一步：运行 /build-slides 开始填充每个章节的内容。
+⏭  下一步：运行 /slide-content-and-scripts 规划每页 Slide 内容与演讲稿
+
+💡 也可以现在运行 /ppt-review，对思维导图结构做早期审查。
+   结构审查器会识别并排节点是否符合已知思维模型，帮你发现可以补全的维度——
+   这是个给你启发的步骤，不是找问题。
 ```
 
 ---

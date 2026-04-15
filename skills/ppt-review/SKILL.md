@@ -1,33 +1,45 @@
 ---
 name: ppt-review
 displayName: PPT Review — 多维度审查与可视化决策
-version: 2.0.0
+version: 2.1.0
 trigger: /ppt-review
 description: >
-  多维度审查 slide-content.md 并驱动可视化决策工具。
-  自动调用三个专项审查器（内容/结构/演讲），生成标准化 JSON，
-  通过 review-dashboard.html 可视化选择，最终执行修改并自动重新评分。
-  - ppt-hours
-  - plan-mindmap
-  - slide-writer
+  可在任意阶段调用的多维度审查工具。
+  不强制要求 slide-content.md 存在——根据当前已有文件智能选择审查范围：
+    - 仅有 ppt-hours.md：审查主题/听众/时长设定
+    - 有 details.md：审查素材质量和关联关系
+    - 有 mindmap.md：审查结构逻辑、思维模型识别与补全
+    - 有 slide-content.md：触发全量七个审查器
+  七个专项审查器生成标准化 JSON，通过 review-dashboard.html 可视化决策，
+  执行修改后自动重新评分。
 inputs:
-  - ~/.pptdog/projects/<slug>/slide-content.md
-  - ~/.pptdog/projects/<slug>/ppt-hours.md       # 可选，用于加载听众画像
+  - ~/.pptdog/projects/<slug>/ppt-hours.md        # 可选，第一步完成即可审查
+  - ~/.pptdog/projects/<slug>/details.md          # 可选，第二步完成即可审查
+  - ~/.pptdog/projects/<slug>/mindmap.md          # 可选，第三步完成即可审查
+  - ~/.pptdog/projects/<slug>/slide-content.md    # 可选，全量审查推荐
   - ~/.pptdog/learnings.jsonl                     # 全局 learnings
 outputs:
   - ~/.pptdog/projects/<slug>/review-suggestions/content-<ts>.json
   - ~/.pptdog/projects/<slug>/review-suggestions/structure-<ts>.json
   - ~/.pptdog/projects/<slug>/review-suggestions/delivery-<ts>.json
+  - ~/.pptdog/projects/<slug>/review-suggestions/logic-<ts>.json
+  - ~/.pptdog/projects/<slug>/review-suggestions/craft-<ts>.json
+  - ~/.pptdog/projects/<slug>/review-suggestions/sync-<ts>.json
+  - ~/.pptdog/projects/<slug>/review-suggestions/layout-<ts>.json
   - ~/.pptdog/projects/<slug>/review-decisions-<ts>.json
 next-skill: /gen-slides
-benefits-from: [slide-content-and-scripts]
-voice-triggers: ["帮我评审PPT", "帮我检查内容", "帮我看看这个演讲"]
+benefits-from: [ppt-hours, plan-details, plan-mindmap, slide-content-and-scripts]
+voice-triggers: ["帮我评审PPT", "帮我检查内容", "帮我看看这个演讲", "帮我看看结构对不对"]
 ---
 
 # PPT Review — 多维度审查与可视化决策
 
 > **使用方式：**
-> - `/ppt-review` — 启动完整审查流程（调用三个审查器 + 打开 Dashboard）
+> - `/ppt-review` — 任意阶段均可启动，AI 自动判断当前可审查哪些维度
+> - `/ppt-review apply` — 读取 decisions 文件并执行修改
+>
+> **不需要等到 slide-content.md 写完才审查。**
+> 每一步完成后都可以运行一次 `/ppt-review`，越早发现结构问题，修改成本越低。
 > - `/ppt-review apply` — 读取 decisions 文件并执行修改
 
 本 skill 是**协调器**，不自己做审查，而是：
@@ -59,9 +71,16 @@ else
   echo "📂 检测到多个项目："; ls -t "$_PROJECTS_DIR" | nl -ba
 fi
 
-# 检查 slide-content.md 是否存在
-[ -f "$HOME/.pptdog/projects/$SLUG/slide-content.md" ] || \
-  { echo "⛔ 未找到 slide-content.md，请先运行 /slide-content-and-scripts"; exit 1; }
+# 智能检测当前阶段（不强制要求 slide-content.md）
+HAS_HOURS=false;   [ -f "$HOME/.pptdog/projects/$SLUG/ppt-hours.md" ]   && HAS_HOURS=true
+HAS_DETAILS=false; [ -f "$HOME/.pptdog/projects/$SLUG/details.md" ]     && HAS_DETAILS=true
+HAS_MINDMAP=false; [ -f "$HOME/.pptdog/projects/$SLUG/mindmap.md" ]     && HAS_MINDMAP=true
+HAS_SLIDES=false;  [ -f "$HOME/.pptdog/projects/$SLUG/slide-content.md" ] && HAS_SLIDES=true
+
+echo "📄 ppt-hours.md:    $HAS_HOURS"
+echo "📦 details.md:      $HAS_DETAILS"
+echo "🧭 mindmap.md:      $HAS_MINDMAP"
+echo "🖼  slide-content.md: $HAS_SLIDES"
 
 # 检查是否有历史 review-suggestions（复查模式检测）
 PREV_COUNT=$(ls "$HOME/.pptdog/projects/$SLUG/review-suggestions/" 2>/dev/null | wc -l | tr -d ' ')
@@ -75,32 +94,64 @@ PREV_COUNT=$(ls "$HOME/.pptdog/projects/$SLUG/review-suggestions/" 2>/dev/null |
 （继续审查流程……）
 ```
 
-打印状态摘要：
+**AI 根据检测结果判断审查阶段，打印状态摘要：**
+
 ```
 📋 项目：<slug>
-📁 项目目录：$(readlink -f $HOME/.pptdog/projects/$SLUG 2>/dev/null || echo $HOME/.pptdog/projects/$SLUG)
-📄 slide-content.md：<行数> 行，<Slide数> 张
-🔍 审查模式：<首次审查 | 复查（第N次）>
+📁 项目目录：<路径>
+
+当前可审查的文件：
+  ppt-hours.md    ✅/❌
+  details.md      ✅/❌
+  mindmap.md      ✅/❌
+  slide-content.md ✅/❌
+
+🔍 审查范围：<见下方阶段判断>
+🔁 审查模式：<首次审查 | 复查（第N次）>
 ```
+
+**阶段判断逻辑（AI 据此决定调用哪些审查器）：**
+
+| 已有文件 | 审查范围 | 可用审查器 |
+|---------|---------|-----------|
+| 仅 ppt-hours.md | 主题/听众/时长设定 | review-sync（部分）|
+| + details.md | 素材质量 + 关联关系 | review-content（部分）+ review-sync |
+| + mindmap.md | 结构逻辑 + 思维模型 | review-structure + review-logic + review-sync |
+| + slide-content.md | 全量审查 | 七个审查器全部 |
+
+若仅有 ppt-hours.md 而无其他文件，AI 说：
+> 「目前只有 ppt-hours.md，可以先审查主题聚焦和听众画像设定。
+> 运行全量审查建议等 details.md 和 mindmap.md 完成后——越早审查结构，修改成本越低。
+> 要现在做早期审查，还是先继续补充内容？」
 
 若用户输入了 `/ppt-review apply`，**跳过 Step 1 和 Step 2，直接执行 Step 3**。
 
 ---
 
-## Step 1：触发七个审查子 skill
+## Step 1：触发审查子 skill
 
-AI 说明：
+AI 说明（根据阶段动态展示）：
 
-> 正在启动七个专项审查器，并行审查（通常 2-3 分钟）……
+> 正在启动审查器，并行审查……
 
+**全量模式（slide-content.md 存在时）：**
 ```
 🔍 内容审查器     (review-content)   — 空姐效应 / 论点深度 / 真实案例 / Why层 / 数字证据
-🔍 结构审查器     (review-structure) — 开关门 / 章节逻辑 / 叙事弧度 / 时长匹配
+🔍 结构审查器     (review-structure) — 开关门 / 章节逻辑 / 叙事弧度 / 时长匹配 / 思维模型识别
 🔍 演讲审查器     (review-delivery)  — 主语 / 口语化 / 时长 / 背稿风险
 🔍 逻辑完整性     (review-logic)     — 推理链条 / MECE / 隐含假设 / 金字塔全局视角
 🔍 演讲技巧机会   (review-craft)     — 递进式深挖 / Call Back / 暗线 / 方法论楔子
 🔍 四文件同步     (review-sync)      — ppt-hours/mindmap/details/slide-content 一致性检查
 🔍 布局质量       (review-layout)    — 布局与内容匹配 / 多样性 / 关键页面布局
+```
+
+**早期模式（仅 mindmap.md，无 slide-content.md）：**
+```
+🔍 结构审查器     (review-structure) — 章节逻辑 / 思维模型识别与补全 ← 早期最有价值
+🔍 逻辑完整性     (review-logic)     — 推理链条 / MECE / 隐含假设
+🔍 四文件同步     (review-sync)      — 已有文件间的一致性
+（其余审查器需要 slide-content.md，暂跳过）
+```
 ```
 
 **调用指令（AI 执行）：**
@@ -364,6 +415,7 @@ B. 否，我先看看修改结果，稍后再审查
 | structure      | 大关门         | 结尾是否有升华和可复述结论                |
 | structure      | 章节小开关门   | 每章是否有小钩子+结论固化                 |
 | structure      | 叙事弧度       | 一波三折/金字塔原理是否完整               |
+| structure      | **思维模型识别** | **并排节点是否符合已知模型，可补全哪些维度** |
 | delivery       | 主语检查       | 演讲稿里"我们"→"我"                      |
 | delivery       | 口语化         | 能不看稿直接讲出来吗                      |
 | delivery       | 时长估算       | 字数估算是否匹配目标时长                  |
@@ -383,3 +435,8 @@ B. 否，我先看看修改结果，稍后再审查
 | layout         | 布局匹配       | 布局类型是否与内容类型匹配                |
 | layout         | 布局多样性     | 是否过度使用 bullet_list                  |
 | layout         | 关键页面布局   | 封面/封底/章节分隔是否使用专用布局         |
+
+> **思维模型识别**是"给讲者启发"的维度，不是找问题——
+> 发现并排节点符合某个模型（MECE/金字塔/一波三折/SWOT/飞轮/黄金圈/F.A.B 等）时，
+> 主动补全缺失节点，以选项形式让讲者决策要不要用。
+> 可在 mindmap.md 完成后即运行（不需要 slide-content.md）。
