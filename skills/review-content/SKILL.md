@@ -1,21 +1,19 @@
 ---
-skill: review-content
-display_name: 内容审查器 — 深度与准确性
-version: "1.0"
+name: review-content
+displayName: "Review Content — 内容深度与准确性审查"
+version: 1.0.0
+trigger: review-content
 description: >
   审查 slide-content.md 的内容质量：空姐效应、论点深度、真实案例完整性、
   Why层覆盖率、假问题识别、授人以渔程度。
   输出标准化 JSON，供 review-dashboard.html 可视化处理。
-triggers:
-  - /review-content
-  - (由 /ppt-review 自动调用，无需手动触发)
-state_dir: ~/.pptdog/projects/<slug>/
 inputs:
   - ~/.pptdog/projects/<slug>/slide-content.md
   - ~/.pptdog/projects/<slug>/details.md
   - ~/.pptdog/projects/<slug>/mindmap.md
 outputs:
   - ~/.pptdog/projects/<slug>/review-suggestions/content-<ts>.json
+benefits-from: [slide-content-and-scripts, plan-details, plan-mindmap]
 ---
 
 # 内容审查器 — 深度与准确性

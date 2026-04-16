@@ -1,20 +1,18 @@
 ---
-skill: review-delivery
-display_name: 演讲交付审查器 — 可演讲性
-version: "1.0"
+name: review-delivery
+displayName: "Review Delivery — 演讲可交付性审查"
+version: 1.0.0
+trigger: review-delivery
 description: >
   审查演讲稿的可演讲性：主语检查（我 vs 我们）、口头说是否可以直接讲（不是书面语）、
   时长估算、开门关门的实际口语化程度、是否有背稿风险。
   输出标准化 JSON，供 review-dashboard.html 可视化处理。
-triggers:
-  - /review-delivery
-  - (由 /ppt-review 自动调用，无需手动触发)
-state_dir: ~/.pptdog/projects/<slug>/
 inputs:
   - ~/.pptdog/projects/<slug>/slide-content.md
   - ~/.pptdog/projects/<slug>/ppt-hours.md
 outputs:
   - ~/.pptdog/projects/<slug>/review-suggestions/delivery-<ts>.json
+benefits-from: [slide-content-and-scripts, ppt-hours]
 ---
 
 # 演讲交付审查器 — 可演讲性

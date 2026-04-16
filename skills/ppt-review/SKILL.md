@@ -43,7 +43,7 @@ voice-triggers: ["帮我评审PPT", "帮我检查内容", "帮我看看这个演
 > - `/ppt-review apply` — 读取 decisions 文件并执行修改
 
 本 skill 是**协调器**，不自己做审查，而是：
-1. 并行调用三个子审查器（review-content / review-structure / review-delivery）
+1. 并行调用七个专项审查器，生成标准化 JSON，
 2. 等待三个 JSON 文件生成
 3. 打开 review-dashboard.html，让用户做决策
 4. 等用户保存 decisions JSON

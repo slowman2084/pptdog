@@ -9,7 +9,7 @@ description: >
   支持三种入口：零起步 / 有大纲 / 有素材。
 outputs:
   - ~/.pptdog/projects/<slug>/ppt-hours.md
-next-skill: /plan-mindmap
+next-skill: /plan-details
 benefits-from: []
 voice-triggers: ["帮我准备演讲", "帮我做PPT", "帮我做汇报", "帮我做分享", "我不知道怎么开始"]
 ---
@@ -490,7 +490,7 @@ EOF
 ```
 ✅ ppt-hours.md 已保存到 $(readlink -f $HOME/.pptdog/projects/$SLUG 2>/dev/null || echo $HOME/.pptdog/projects/$SLUG)/ppt-hours.md
 
-下一步：运行 /plan-mindmap 来设计你的分享结构。
+⏭  下一步：运行 /plan-details——把你的素材全部整理清楚，再进入结构设计。
 ```
 
 ---

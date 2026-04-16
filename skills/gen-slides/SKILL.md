@@ -180,71 +180,8 @@ AI 根据 `HAS_TEMPLATE` + 已安装工具 + **ppt-generator-pro / html-ppt-desi
 > **严禁静默使用任何默认值直接开始生成。**
 > 理由：不同 backend 的输出格式、视觉效果、文件格式差异很大，这是用户的主权决策。
 
-> **ppt-generator-pro** 是默认推荐的 PPT 生成 skill。工作流：
-> 1. 先用 ppt-generator-pro 生成每页的 **图片（PNG）**，支持通过参考图指定风格
-> 2. 再用 `pptx` skill 把图片打包成 **标准 .pptx 文件**，可用 PPT/Keynote/WPS 打开
->
-> **使用示例：**
-> ```
-> /gen-slides 参考风格图.png [默认] ppt-generator-pro skill
-> ```
-> 不提供参考图时，AI 会询问风格偏好（简约/商务/技术/活泼）并给 2-3 个示例让用户选。
->
-> **NanoBanana PPT Skills** 是专为 AI 代码编辑器（Claude Code / Cursor / Codex 等）设计的 PPT 生成 skill，也支持通过参考图片指定视觉风格。
-> 项目地址：https://github.com/op7418/NanoBanana-PPT-Skills
 
-**当 ppt-generator-pro 已安装（默认推荐）：**
-
-```
-🎨 检测到 ppt-generator-pro！
-
-  ⭐ ppt-generator-pro + pptx  ← 默认推荐（两步串联：图片→.pptx）
-     步骤1：ppt-generator-pro 根据 slide-content.md 生成每页图片（PNG）
-     步骤2：pptx skill 把图片打包成标准 .pptx 文件
-     → 支持通过参考图指定视觉风格
-     → 最终产物是可编辑的 .pptx 文件
-```
-
-若 ppt-generator-pro 已安装，AI 额外提问：
-
-**Qg-style：是否提供参考图来指定视觉风格？**
-
-```
-A. 提供参考图（截一张你喜欢的 PPT 风格截图，或任意风格参考图）  ← 推荐
-   → AI 会基于参考图的配色、排版风格生成 PPT 图片
-
-B. 不提供参考图，选择预设风格：
-   B1. 简约商务（深色标题 + 白底 + 少量图表）
-   B2. 技术分享（代码风 + 暗色调 + 等宽字体）
-   B3. 活泼分享（饱和色 + 大图 + 现代排版）
-   → AI 展示 2-3 张风格示例让用户确认
-
-C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
-```
-
-> 💡 参考图不需要是 PPT 截图，任何你觉得"这个视觉风格我喜欢"的图片都可以——品牌设计、海报、APP 界面截图都行。ppt-generator-pro 会分析其中的色彩和排版逻辑并迁移到你的 PPT 上。
-
----
-
-**当 NanoBanana 未安装时，展示安装建议：**
-
-```
-💡 未检测到 NanoBanana PPT Skills（推荐安装）
-
-   NanoBanana 是专为 AI 代码编辑器设计的 PPT 生成 skill，支持通过
-   参考图片指定视觉风格，生成效果最接近设计师水准。
-
-   安装方式：https://github.com/op7418/NanoBanana-PPT-Skills
-   （在 Claude Code / Cursor / Codex 中按说明安装即可）
-
-   是否现在安装？
-   A. 是，我去安装，装完再回来继续
-   B. 否，先用当前可用的工具生成
-```
-
----
-
-**完整 Backend 列表（有/无 NanoBanana 均显示，NanoBanana 排首位）：**
+**完整 Backend 列表（根据检测到的工具动态显示）：**
 
 **当 `HAS_TEMPLATE=true`（检测到 .pptx 模板）：**
 
@@ -330,6 +267,27 @@ C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
 
 > **仅当用户选择 ppt-generator-pro（选项 A）时执行本节。**
 
+> **注意：Qg-style 仅适用于 Backend B（ppt-generator-pro）和 C（NanoBanana）。**
+> html-ppt-designer（Backend A）选定后，直接进入 Step 2 适配，不需要参考图选择。
+
+**Qg-style：是否提供参考图来指定视觉风格？**
+
+```
+A. 提供参考图（截一张你喜欢的 PPT 风格截图，或任意风格参考图）  ← 推荐
+   → AI 会基于参考图的配色、排版风格生成 PPT 图片
+
+B. 不提供参考图，选择预设风格：
+   B1. 简约商务（深色标题 + 白底 + 少量图表）
+   B2. 技术分享（代码风 + 暗色调 + 等宽字体）
+   B3. 活泼分享（饱和色 + 大图 + 现代排版）
+   → AI 展示 2-3 张风格示例让用户确认
+
+C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
+```
+
+> 💡 参考图不需要是 PPT 截图，任何你觉得"这个视觉风格我喜欢"的图片都可以——品牌设计、海报、APP 界面截图都行。
+
+
 ### 串联说明
 
 ppt-generator-pro 生成的是**每页图片（PNG/JPG）**，不是 .pptx 文件。
@@ -384,7 +342,13 @@ AI 在调用 ppt-generator-pro 前，按以下格式组织输入：
 
 > 不同 backend 对内容的要求不同。AI 在调用 backend 前，先做格式适配。
 
-### 适配 A：pptx skill 格式
+### 适配 A：html-ppt-designer 格式
+
+html-ppt-designer 直接读取 slide-content.md 或将其转换为对应的输入格式（参见其 README）。
+AI 在调用前读取 html-ppt-designer 的 SKILL.md 或 README 以了解确切的输入要求，
+然后基于 slide-content.md 的内容组织输入。
+
+### 适配 B：pptx skill 格式
 
 将 slide-content.md 转换为 pptx skill 接受的输入格式，**并传入模板路径（若 HAS_TEMPLATE=true）**：
 
@@ -419,7 +383,7 @@ C. 我要手动调整某几页（告诉 AI 哪几页）
 
 > 💡 首次使用建议选 A，确认 AI 没有误删重要内容；熟悉流程后选 B 更高效。
 
-### 适配 B：python-pptx 格式
+### 适配 C：python-pptx 格式
 
 AI 将 slide-content.md 解析为结构化 dict，内嵌到生成脚本，**有模板时载入模板文件**：
 
@@ -439,7 +403,7 @@ SLIDES = [
 ]
 ```
 
-### 适配 C：Marp 格式
+### 适配 D：Marp 格式
 
 将 slide-content.md 转换为 Marp Markdown：
 
@@ -464,7 +428,7 @@ paginate: true
 ---
 ```
 
-### 适配 D：结构化 Markdown
+### 适配 E：结构化 Markdown
 
 直接输出为标准化 Markdown，格式清晰，便于导入任何工具：
 
