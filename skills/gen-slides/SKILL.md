@@ -1,7 +1,7 @@
 ---
 name: gen-slides
 displayName: Gen Slides — 把内容稿转化为真正的 PPT
-version: 1.3.0
+version: 1.4.0
 trigger: /gen-slides
 description: >
   内容已确认，这一步把 slide-content.md 转化为真正的演示文稿文件。
@@ -145,6 +145,17 @@ for base_dir in ~/.claude ~/.codex ~/.openclaw ~/.codebuddy ~/.cursor ~/.agents;
   done
 done
 
+# 检查 html-ppt-designer（HTML PPT 生成器）
+# 项目地址：https://github.com/andyhuo520/html-ppt-designer
+for base_dir in ~/.claude ~/.codex ~/.openclaw ~/.codebuddy ~/.cursor ~/.agents; do
+  skill_dir="$base_dir/skills/html-ppt-designer"
+  [ -d "$skill_dir" ] && echo "FOUND_SKILL: $skill_dir (html-ppt-designer)"
+done
+# 也检测是否已 clone 到本地常见路径
+for p in ~/html-ppt-designer ~/projects/html-ppt-designer ~/code/html-ppt-designer; do
+  [ -d "$p" ] && echo "FOUND_LOCAL: $p (html-ppt-designer)"
+done
+
 # 检查 Marp CLI（Markdown → PPTX/PDF/HTML）
 command -v marp 2>/dev/null && echo "FOUND: marp"
 npx marp --version 2>/dev/null && echo "FOUND: marp (npx)"
@@ -160,7 +171,14 @@ command -v soffice 2>/dev/null && echo "FOUND: libreoffice (soffice)"
 
 ### 1-C：汇总可用 Backend（动态推荐逻辑）
 
-AI 根据 `HAS_TEMPLATE` + 已安装工具 + **ppt-generator-pro 和 NanoBanana 是否安装**，动态决定推荐项。
+AI 根据 `HAS_TEMPLATE` + 已安装工具 + **ppt-generator-pro / html-ppt-designer / NanoBanana 是否安装**，动态决定推荐项。
+
+> ## ⚠️ 强制要求：未指定 backend 时必须让用户选择
+>
+> 如果用户运行 `/gen-slides` 时**没有指定 backend**（没有传 `--backend` 参数），
+> AI **必须**先完成扫描，然后展示完整的 Backend 列表让用户主动选择。
+> **严禁静默使用任何默认值直接开始生成。**
+> 理由：不同 backend 的输出格式、视觉效果、文件格式差异很大，这是用户的主权决策。
 
 > **ppt-generator-pro** 是默认推荐的 PPT 生成 skill。工作流：
 > 1. 先用 ppt-generator-pro 生成每页的 **图片（PNG）**，支持通过参考图指定风格
@@ -235,15 +253,16 @@ C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
 
 🔍 可用的 PPT 生成工具：
 
-  A. ppt-generator-pro + pptx ✅ 已安装  ← 默认推荐（图片→.pptx 两步串联，支持参考图风格）
-  B. NanoBanana PPT Skills    ✅ 已安装  （支持参考图风格 + .pptx 模板）
-  C. pptx / pptx-generation   ✅ 已安装  （原生支持 .pptx 模板，保留母版/配色/字体）
-  D. python-pptx + 模板       ✅ 已安装  （模板支持，样式控制更灵活）
-  E. Marp                     ✅ 已安装  （不支持 .pptx 模板，使用 Marp 主题）
-  F. 仅导出 Markdown           ✅ 始终可用（手动导入并套模板）
-  G. 自定义：我有其他工具
+  A. html-ppt-designer         ✅/❌ 已安装/未安装  ⭐ 推荐新选项（HTML/CSS 演示，浏览器打开即可演示，无格式损耗）
+  B. ppt-generator-pro + pptx  ✅/❌ 已安装        （图片→.pptx 两步串联，支持参考图风格）
+  C. NanoBanana PPT Skills     ✅/❌ 已安装        （支持参考图风格 + .pptx 模板）
+  D. pptx / pptx-generation    ✅/❌ 已安装        （原生支持 .pptx 模板，保留母版/配色/字体）
+  E. python-pptx + 模板        ✅/❌ 已安装        （模板支持，样式控制更灵活）
+  F. Marp                      ✅/❌ 已安装        （不支持 .pptx 模板，使用 Marp 主题）
+  G. 仅导出 Markdown            ✅ 始终可用         （手动导入并套模板）
+  H. 自定义：我有其他工具
 
-  ⚠️ 注意：E、F 不能使用你的 .pptx 模板。
+  ⚠️ 注意：F、G 不能使用你的 .pptx 模板。
 ```
 
 **当 `HAS_TEMPLATE=false`（无模板）：**
@@ -251,37 +270,59 @@ C. 使用我的公司 .pptx 模板作为风格基础（若检测到模板）
 ```
 🔍 可用的 PPT 生成工具：
 
-  A. ppt-generator-pro + pptx ✅ 已安装  ← 默认推荐（图片→.pptx 两步串联，支持参考图风格）
-  B. NanoBanana PPT Skills    ✅ 已安装  （参考图驱动风格，效果好）
-  C. pptx / pptx-generation   ✅ 已安装  （标准 .pptx，可在 PPT/Keynote/WPS 打开）
-  D. python-pptx              ✅ 已安装  （样式较简单，速度快）
-  E. Marp                     ✅ 已安装  （技术演讲首选，主题丰富）
-  F. 仅导出 Markdown           ✅ 始终可用（导入 Gamma / Google Slides / Canva）
-  G. 自定义：我有其他工具
+  A. html-ppt-designer         ✅/❌ 已安装/未安装  ⭐ 推荐新选项（HTML/CSS 演示，浏览器打开即可演示，无格式损耗）
+  B. ppt-generator-pro + pptx  ✅/❌ 已安装        （图片→.pptx 两步串联，支持参考图风格）
+  C. NanoBanana PPT Skills     ✅/❌ 已安装        （参考图驱动风格，效果好）
+  D. pptx / pptx-generation    ✅/❌ 已安装        （标准 .pptx，可在 PPT/Keynote/WPS 打开）
+  E. python-pptx               ✅/❌ 已安装        （样式较简单，速度快）
+  F. Marp                      ✅/❌ 已安装        （技术演讲首选，主题丰富）
+  G. 仅导出 Markdown            ✅ 始终可用         （导入 Gamma / Google Slides / Canva）
+  H. 自定义：我有其他工具
 
   💡 没有公司模板？可以放一个 .pptx 模板到 ~/.pptdog/templates/，
      下次会自动检测并优先推荐基于模板的生成方式。
 ```
 
-若 ppt-generator-pro 和 NanoBanana 都未安装：
+**html-ppt-designer 未安装时，展示安装建议：**
 
 ```
-⚠️ 未检测到 ppt-generator-pro（默认推荐 skill）。
-   安装方式：在你的 AI 代码编辑器里安装 ppt-generator-pro skill
-   或直接使用「仅导出 Markdown」选项（F），手动转换。
+⭐ html-ppt-designer（推荐尝试）：
+   用 HTML/CSS 生成演示文稿，浏览器直接打开即可演示——无需 PowerPoint/Keynote，
+   视觉效果不受格式转换损耗，适合技术分享和不依赖 PPT 软件的场合。
+
+   项目地址：https://github.com/andyhuo520/html-ppt-designer
+   安装：clone 到本地或在 AI 代码编辑器中安装对应 skill
+
+   是否现在安装？
+   A. 是，我去装，装完回来继续
+   B. 否，先用其他 backend
+```
+
+若 ppt-generator-pro、NanoBanana、html-ppt-designer 都未安装：
+
+```
+⚠️ 推荐的 PPT 生成工具均未检测到，当前可用：
+   - python-pptx（若已安装）
+   - Marp（若已安装）
+   - 仅导出 Markdown（始终可用）
+
+   推荐安装（任选其一）：
+   ⭐ html-ppt-designer：https://github.com/andyhuo520/html-ppt-designer
+      NanoBanana：https://github.com/op7418/NanoBanana-PPT-Skills
 ```
 
 ---
 
-**Qg-1：选择生成 Backend**（AI 动态展示上方结果，标注推荐）
+**Qg-1：选择生成 Backend**（AI 动态展示上方检测结果，标注推荐）
 
 > 💡 **如何选择：**
-> - 想要最好看的视觉效果 + 最终要 .pptx 文件 → **A（ppt-generator-pro + pptx，默认推荐）**
-> - 有公司 .pptx 模板，要完整保留视觉规范 → **C（pptx skill + 模板）**
-> - 有参考图风格需求，NanoBanana 已安装 → **B（NanoBanana）**
-> - 快速出稿，不在意样式 → **D（python-pptx）**
-> - 技术分享，代码多，喜欢 Markdown 流 → **E（Marp）**
-> - 后续在 Gamma / Beautiful.ai 等工具做视觉加工 → **F（Markdown）**
+> - 不依赖 PPT 软件，想要直接在浏览器演示 → **A（html-ppt-designer，⭐ 推荐）**
+> - 想要最好看的视觉效果 + 最终要 .pptx 文件 → **B（ppt-generator-pro + pptx）**
+> - 有公司 .pptx 模板，要完整保留视觉规范 → **D（pptx skill + 模板）**
+> - 有参考图风格需求，NanoBanana 已安装 → **C（NanoBanana）**
+> - 快速出稿，不在意样式 → **E（python-pptx）**
+> - 技术分享，代码多，喜欢 Markdown 流 → **F（Marp）**
+> - 后续在 Gamma / Beautiful.ai 等工具做视觉加工 → **G（Markdown）**
 
 ---
 
@@ -445,7 +486,37 @@ paginate: true
 
 ## Step 3：调用 Backend 执行生成
 
-### Backend A：调用 pptx skill
+### Backend A（html-ppt-designer）：HTML PPT 生成
+
+> 项目地址：https://github.com/andyhuo520/html-ppt-designer
+
+**若 html-ppt-designer 作为 skill 安装（在 AI 代码编辑器中）：**
+
+```
+读取 <skill_path>/SKILL.md，按其指令执行。
+将 slide-content.md 的内容作为输入传入。
+输出路径指定为：~/.pptdog/projects/$SLUG/slides/
+```
+
+**若 html-ppt-designer 作为本地项目 clone：**
+
+AI 读取 html-ppt-designer 的 README，了解其输入格式要求，然后将 slide-content.md 转换为对应格式传入。
+
+输出产物：
+- `~/.pptdog/projects/<slug>/slides/index.html`（主演示文件，浏览器打开即可演示）
+- 可能包含 `assets/`、`slides/` 等子目录
+
+交付提示：
+
+```
+✅ HTML 演示文稿已生成！
+📄 文件路径：~/.pptdog/projects/<slug>/slides/index.html
+🌐 演示方式：直接用浏览器打开 index.html，按方向键/空格翻页
+   open ~/.pptdog/projects/<slug>/slides/index.html
+📤 分享方式：将 slides/ 目录上传到任意静态托管服务（GitHub Pages / Vercel / 自建服务器）
+```
+
+### Backend B：调用 pptx skill
 
 读取 pptx skill 的 SKILL.md（位于检测到的路径），按其指令执行：
 
@@ -462,7 +533,7 @@ paginate: true
 > ⚠️ **如果 pptx skill 未安装**：提示用户在当前 IDE 中安装 pptx skill，然后重新运行 /gen-slides。
 > Claude Code 用户：输入 `/pptx` 或在 skill 市场搜索 "pptx"。
 
-### Backend B：python-pptx 脚本生成
+### Backend C：python-pptx 脚本生成
 
 AI 动态生成完整的 Python 脚本并执行：
 
@@ -486,7 +557,7 @@ uv run python /tmp/pptdog-gen-<slug>.py \
 - 每页：标题 + 正文 bullet + 图示占位框（若有）+ 演讲者备注
 - 完整错误处理
 
-### Backend C：Marp 生成
+### Backend D：Marp 生成
 
 ```bash
 mkdir -p ~/.pptdog/projects/<slug>/slides/
@@ -508,7 +579,7 @@ marp ~/.pptdog/projects/<slug>/slides/deck.md \
   && echo "✅ HTML 生成成功"
 ```
 
-### Backend D：导出 Markdown
+### Backend E：导出 Markdown
 
 ```bash
 mkdir -p ~/.pptdog/projects/<slug>/slides/
@@ -609,10 +680,14 @@ COLORS = {
 
 ### backend 优先级（无用户指定时）
 
-1. pptx skill（已安装）
-2. python-pptx（已安装）
-3. Marp（已安装）
-4. 结构化 Markdown（始终可用）
+> ⚠️ 无论优先级如何，**必须展示完整选项列表让用户选择**，不允许静默跳过选择步骤。
+> 优先级仅决定列表中的排序和推荐标注，不决定执行顺序。
+
+1. html-ppt-designer（已安装，⭐ 推荐新选项）
+2. pptx skill（已安装）
+3. python-pptx（已安装）
+4. Marp（已安装）
+5. 结构化 Markdown（始终可用）
 
 ### learnings 写入（gen-slides 场景）
 
