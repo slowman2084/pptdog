@@ -1,0 +1,319 @@
+testcases:
+- id: case_0
+  input: '我要讲的是我们团队引入 AI Coding 工具的经历。主要有这几块：
+
+    1. 为什么要引入（团队效率瓶颈）
+
+    2. 调研了哪些工具（Cursor、Copilot、通义灵码）
+
+    3. 最终选了 Cursor，依据是什么
+
+    4. 上线后的效果，代码审查时间降了 40%
+
+    5. 踩过的坑（上下文窗口不够、新人适应慢）
+
+    '
+  skill_type: conversational-guide
+  notes: 验证 Happy Path：讲者已有清晰素材列表时的正常深化流程。AI 应盘点素材、标记核心、追问最核心素材的 Why 层，而非直接写 details.md。
+  expected_output: '好，你已经有了一个清晰的素材轮廓，我来帮你把这些东西整理成可以直接用的素材库。
+
+
+    先做一件事：把你说的内容变成带编号的素材清单，这样后面好操作。
+
+
+    **当前素材清单（初稿）**
+
+
+    | 编号 | 标题 | 类型 |
+
+    |------|------|------|
+
+    | M01 | 团队效率瓶颈——引入 AI 工具的背景 | 证据 |
+
+    | M02 | 工具调研：Cursor / Copilot / 通义灵码对比 | 证据 |
+
+    | M03 | 选型结论：最终选 Cursor 的依据 | 观点 |
+
+    | M04 | 效果数据：代码审查时间降 40% | 证据 |
+
+    | M05 | 踩坑记录：上下文窗口不够 + 新人适应慢 | 证据 |
+
+
+    **还有遗漏吗？** 比如有没有某个让你印象深刻的小故事，或者某个"差点失败"的时刻，没有列进来的？
+
+
+    ---
+
+
+    接下来我想确认一下：**哪几条是你准备重点讲的核心素材？**
+
+
+    我的建议是：M03（选型依据）和 M04（效果数据）+ M05（踩坑）这三条最有可能是核心——它们有你独特的判断和真实经历。M01 和 M02 更像是背景铺垫。
+
+
+    你认同这个判断吗？还是你觉得某条更重要？
+
+    '
+  Judge:
+  - criterion: 输出了带编号（M01-M05）的素材清单，与讲者提到的五条内容一一对应
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 主动问了「还有遗漏吗」，给讲者补充机会
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 提出了核心/辅助的建议标记，但用「你认同吗？」等待讲者确认，没有直接决定
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有直接开始写 details.md 或追问具体深化内容，等待讲者确认核心标记后才继续
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有在素材清单里添加讲者未提到的内容（如具体数字、人名等）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: '（接上一轮，讲者确认核心素材为 M03 和 M04 后）
+
+    对，M03 选型依据和 M04 效果数据是核心，其他是背景。可以开始深化了。
+
+    '
+  skill_type: conversational-guide
+  notes: 验证核心素材深化流程：追问优先于替代（I3/F4）。AI 面对「选型依据」这条观点型素材，应先用开放式问题追问 Why 层，不能直接给出三层 Why
+    的内容。
+  expected_output: '好，先来深化 **M03：选型依据**。
+
+
+    你说最终选了 Cursor，我想帮你把"为什么选 Cursor 而不是 Copilot 或通义灵码"这个决策挖清楚——因为听众最想知道的就是你的判断逻辑，而不只是"我们选了
+    Cursor"这个结论。
+
+
+    **追问 Why 层（第一层）：** 从调研结果来看，Cursor 胜出的直接理由是什么？是功能、价格、集成成本，还是什么？
+
+
+    （你说出来之后，我们再往下挖第二层和第三层。）
+
+    '
+  Judge:
+  - criterion: 只追问了第一层 Why，没有直接给出三层分析内容（不替讲者回答）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 用开放式问题（「是什么？」）而非选择题引导，给讲者空间自己说
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 说明了追问的意图（「听众最想知道判断逻辑」），帮讲者理解为什么要挖这一层
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有跳过追问直接输出「Cursor 的优势是：1. 上下文更长 2. 本地运行...」之类的内容
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 明确说了下一步（「说出来后再挖第二层第三层」），让讲者知道流程
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: '（接上一轮追问后，讲者说）
+
+    Cursor 主要是上下文窗口更大，Copilot 在我们的代码库里经常失忆。通义灵码免费但代码补全质量不稳定。我们最看重的是它能理解整个项目结构，不只是当前文件。
+
+    '
+  skill_type: conversational-guide
+  notes: 验证 Why 层追问的第二、三层深化：讲者给出了第一层（功能差异），AI 应继续追问第二层（为什么这个功能对团队特别重要）和第三层（可复用的判断原则）。
+  expected_output: '很好，这是第一层：**Cursor 能理解整个项目结构，而不只是当前文件**——Copilot 在大代码库里"失忆"是你们切换的直接原因。
+
+
+    继续往下挖一层。**为什么对你们团队来说"理解项目结构"特别关键？** 是因为你们的项目耦合度高、文件跳转多，还是有别的原因？
+
+
+    （这一层是关于你们团队的具体情况，听众听完能判断"这和我们团队一样"或者"我们不一样"。）
+
+    '
+  Judge:
+  - criterion: 复述了讲者说的第一层 Why（理解项目结构），表明 AI 理解了讲者的回答
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 紧接着追问第二层（为什么对你们团队特别关键），而非直接给出第三层方法论
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 给了一个具体的方向提示（耦合度高、文件跳转多），帮助讲者激活记忆，但仍是问句形式
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 括号里解释了第二层的价值（帮听众判断可迁移性），体现对内容价值的理解
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有在还没挖完 Why 层的情况下开始整理其他素材
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: '我有个关于 AI 工具的分享要做，素材很多，你帮我整理一下吧。
+
+    '
+  skill_type: conversational-guide
+  notes: 验证 F1 失败模式防御：讲者提供的信息过于笼统，没有说明是否已完成 ppt-hours 步骤。AI 应检查前置依赖，不能直接开始整理素材。
+  expected_output: '没问题，帮你整理素材是 plan-details 的核心任务。不过在开始之前，我想确认一件事：
+
+
+    **你有没有先跑过 `/ppt-hours`？**
+
+
+    原因是：plan-details 整理出来的素材要符合你的演讲场景——听众是谁、他们期待带走什么。如果还没做 ppt-hours，整理出来的素材可能方向不对，后面要返工。
+
+
+    如果已经做过了，把 ppt-hours.md 的关键结论告诉我（或者让我读文件），我们就可以开始。
+
+
+    如果还没做，建议先跑一下 `/ppt-hours`，15-20 分钟，把听众和主题定清楚，再来整理素材效率更高。
+
+    '
+  Judge:
+  - criterion: 检查了 ppt-hours 前置依赖，没有直接开始整理素材
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 解释了为什么需要先做 ppt-hours（方向要对，否则返工），而非只说「需要先做」
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 给了两条路：已做过则提供结论继续，未做过则建议先做
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 语气不是拒绝，是解释原因后引导选择
+    points: 25
+    tags:
+    - axis:accuracy
+- id: case_4
+  input: '（讲者在 Why 层追问中说）
+
+    我想不起来当时具体的对比测试数据了，你帮我写一下吧。
+
+    '
+  skill_type: conversational-guide
+  notes: 验证「想不出时才给初稿」原则（I3/F4）：讲者明确表示想不起来，AI 可以给出初稿供讲者修改，但必须明确标注是 AI 推断，邀请讲者确认。
+  expected_output: '好，既然当时的数据记不清了，我根据你之前说的情况给你一个推断版本，你来判断哪里对、哪里不准：
+
+
+    ---
+
+
+    **M03 选型依据 · Why 第二层（AI 推断版，请确认）**
+
+
+    你们重视「理解项目结构」，可能是因为：你们的代码库已经达到一定规模（多模块/多服务），修一个 bug 经常需要跳 3-5 个文件才能定位上下文。Copilot
+    每次只能看当前文件，导致它给的建议经常缺乏跨文件的关联性——它不知道这个函数被哪些地方调用、这个接口的上游是什么。
+
+
+    ---
+
+
+    这个描述接近你们的实际情况吗？哪里需要修正？
+
+
+    **特别提醒：** 这段内容是我推断的，不是你真实经历的——上台讲的时候，如果这里不准确，听众会察觉的。请务必改成你实际记得的描述。
+
+    '
+  Judge:
+  - criterion: 给出了具体的 Why 第二层初稿（而非继续空问），因为讲者已明确说想不起来
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 明确标注了「AI 推断版，请确认」，没有把推断内容当作事实呈现
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 邀请讲者修正哪里不准确
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 结尾特别提醒这是推断内容，上台时如果不准确听众会察觉——体现对「素材真实性」的重视
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有在讲者想不起来时就放弃追问该素材，而是用初稿继续推进深化
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_5
+  input: '不用再追问了，你帮我把现在有的内容写成 details.md 就好。
+
+    '
+  skill_type: conversational-guide
+  notes: 验证退出机制（次需级标准）：讲者发出退出信号，AI 应尊重并用现有内容继续，对未完成深化的核心素材标注警告，不强制追问。
+  expected_output: '好的，我们就用现在整理好的内容来写 details.md。
+
+
+    需要先说一下：**M04（效果数据）的深化还没完成**——Why 层我们只到了第一层，第二三层没有挖。我会在文件里标注「⚠️ 讲者跳过，待后续补充」，提醒你在演讲前回来完善这一块。
+
+
+    ---
+
+
+    好，开始生成 details.md……
+
+
+    **素材库**
+
+
+    **核心素材**
+
+
+    **M03 · 选型依据：最终选 Cursor 的决策逻辑**
+
+    分类：观点
+
+    Why 第一层：Cursor 能理解整个项目结构（Copilot 在大代码库里失忆）
+
+    Why 第二层（AI 推断，已请讲者确认）：团队代码库规模较大，修 bug 需跨文件定位，Copilot 缺乏跨文件关联性
+
+    Why 第三层：⚠️ 讲者跳过，待后续补充
+
+
+    **M04 · 效果数据：代码审查时间降 40%**
+
+    分类：证据
+
+    深化状态：⚠️ 讲者跳过，待后续补充——建议补充：基线是多少？40% 是绝对值还是相对值？测量周期多长？
+
+
+    ---
+
+
+    （文件继续生成其余素材）
+
+
+    最后确认一下：这份 details.md 里有 2 处「讲者跳过」的标注，在跑 /plan-mindmap 之前，这两处补完的效果会更好。
+
+    '
+  Judge:
+  - criterion: 尊重讲者的退出信号，没有继续追问
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 明确标注了未完成深化的核心素材（「⚠️ 讲者跳过，待后续补充」）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 在 details.md 中对跳过的素材给出了「建议补充什么」的提示，降低讲者后续补充的门槛
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 生成了实质性内容（不是空框架），已深化的部分有实际内容
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 最后提醒讲者补充这两处后效果更好，而不是强迫现在补
+    points: 20
+    tags:
+    - axis:accuracy

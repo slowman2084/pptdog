@@ -1,0 +1,368 @@
+testcases:
+- id: case_0
+  input: '以下是一段 slide-content.md 片段，包含明显的空姐效应问题：
+
+
+    ## Slide 5 — 告警分级策略让响应速度提升 90%
+
+
+    **论点类型：** 数据型
+
+
+    **PPT 上放：**
+
+    布局：bullet_list
+
+    - 我们通过建立统一的告警分级体系，将所有告警分为 P1/P2/P3 三个级别
+
+    - P1 级别的告警必须在 5 分钟内响应，P2 级别 30 分钟，P3 级别 2 小时
+
+    - 通过这套体系，我们把平均响应时间从 43 分钟降低到了 4.3 分钟，提升了 90%
+
+
+    **演讲口头说：**
+
+    - 承接上一页：上面说到了监控盲点的问题，那我们是怎么解决的？
+
+    - 核心内容：我们建立了告警分级体系，把告警分为三级。P1 必须 5 分钟内响应，P2 是 30 分钟，P3 是 2 小时。通过这套体系，平均响应时间从 43
+    分钟降到了 4.3 分钟。
+
+    - 铺垫下一页：但光有分级还不够，分级之后怎么保证落地？
+
+    '
+  skill_type: analysis-review
+  notes: 验证空姐效应识别——PPT 正文包含完整句子且与演讲口头说高度重叠，应生成 critical 级 suggestion，options 必须提供具体的精简后内容
+  expected_output: "\U0001F4CA 文件统计：\n  slide-content.md : 25 行，约 8 页 Slide\n  details.md\
+    \       : 45 行\n  mindmap.md       : 18 行\n\n\U0001F50D 正在审查内容质量（6个维度）...\n\n\
+    [\n  {\n    \"id\": \"content-001\",\n    \"reviewer_id\": \"content\",\n    \"\
+    dimension\": \"空姐效应\",\n    \"severity\": \"critical\",\n    \"context\": \"第2章·论点2.1「告警分级策略让响应速度提升90%」——PPT上放字段\"\
+    ,\n    \"source_lines\": { \"start\": 12, \"end\": 18 },\n    \"original\": \"\
+    - 我们通过建立统一的告警分级体系，将所有告警分为 P1/P2/P3 三个级别\\n- P1 级别的告警必须在 5 分钟内响应...\",\n    \"\
+    problem\": \"这页 PPT 上的字太多了，而且和你口头说的几乎一模一样——听众放映时会去读屏幕，根本不听你讲。PPT 是视觉锚点，不是你要读的稿子。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"只留核心数字对比，文字说明放口头说\",\n        \"content\": \"布局：before_after\\n左侧「告警响应前：平均\
+    \ 43 分钟」\\n右侧「告警响应后：平均 4.3 分钟」\\n底部标注：P1/P2/P3 三级体系\",\n        \"recommended\"\
+    : true,\n        \"reason\": \"数字冲击力强，一眼记住，细节留给口头说解释\"\n      },\n      {\n  \
+    \      \"label\": \"B\",\n        \"description\": \"精简为三行要点\",\n        \"content\"\
+    : \"布局：three_stat\\n43分钟 → 4.3分钟 | P1: 5分钟 | P2: 30分钟\",\n        \"recommended\"\
+    : false,\n        \"reason\": \"保留结构但减少文字\"\n      },\n      {\n        \"label\"\
+    : \"C\",\n        \"description\": \"保持原样\",\n        \"content\": \"（不修改）\",\n\
+    \        \"recommended\": false,\n        \"reason\": \"\"\n      }\n    ]\n \
+    \ }\n]\n\n## 内容审查结果 — demo-slug\n\n| # | 维度 | 严重程度 | 位置 | 问题摘要 |\n|---|------|---------|------|---------|\n\
+    | content-001 | 空姐效应 | \U0001F534 critical | 第 5 页 | PPT正文与演讲口头说高度重复，听众会读屏幕不听讲\
+    \ |\n\n**共 1 条建议：critical 1 / major 0 / minor 0**\n\n✅ 内容审查完成，JSON 已写入：~/.pptdog/projects/demo-slug/review-suggestions/content-20260417T143022.json\n"
+  Judge:
+  - criterion: 空姐效应触发正确：PPT 正文超过 30 字且含完整句子，生成 critical suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: dimension 字段为「空姐效应」，不是「数字证据」或其他维度
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 的 content 写出了具体的新 PPT 布局内容（before_after 布局+具体数字），而非「建议精简
+      PPT 内容」
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段用口语描述真实后果（听众会去读屏幕），未使用「空姐效应违规」等方法论术语
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 健康内容（承接上一页、铺垫下一页）未被误报
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: '以下 slide-content.md 片段含有 [AI推断，请确认] 标注：
+
+
+    ## Slide 8 — 服务降级策略将可用性从 99.5% 提升到 99.95%
+
+
+    **PPT 上放：**
+
+    布局：big_number
+
+    可用性：99.5% → 99.95%
+
+
+    **演讲口头说：**
+
+    - 核心内容：[AI推断，请确认] 通过实施三层服务降级策略，在大促期间保障了核心链路稳定性。我们参考了业界成熟的降级方案，结合团队实际情况设计了这套体系。
+
+    - 铺垫下一页：降级之后，还需要配合熔断机制才能形成完整的稳定性防线。
+
+    '
+  skill_type: analysis-review
+  notes: 验证 AI 推断内容的特殊处理（D2A）——含 [AI推断] 标注的内容块不应被做六维度内容审查，只生成一条 dimension=AI推断内容 的专属提示
+    suggestion
+  expected_output: "[\n  {\n    \"id\": \"content-001\",\n    \"reviewer_id\": \"\
+    content\",\n    \"dimension\": \"AI推断内容\",\n    \"severity\": \"major\",\n   \
+    \ \"context\": \"第3章·论点3.2「服务降级策略」——演讲口头说核心内容段\",\n    \"source_lines\": { \"\
+    start\": 14, \"end\": 17 },\n    \"original\": \"[AI推断，请确认] 通过实施三层服务降级策略...\"\
+    ,\n    \"problem\": \"这里是 AI 推断的内容，演讲前需要替换成你的真实素材，否则上台讲时可能说不清楚这套降级体系到底是怎么来的\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"已有真实素材，直接替换为你的实际经历\",\n        \"content\": \"（请将此处替换为你实际设计和实施三层降级策略的真实过程）\"\
+    ,\n        \"recommended\": true,\n        \"reason\": \"真实经历才能在台上自然地讲出来，推断内容会让你在被追问时说不下去\"\
+    \n      },\n      {\n        \"label\": \"B\",\n        \"description\": \"暂时保留，演讲前再确认\"\
+    ,\n        \"content\": \"（暂保留 AI 推断，标记为待确认）\",\n        \"recommended\": false,\n\
+    \        \"reason\": \"\"\n      },\n      {\n        \"label\": \"C\",\n    \
+    \    \"description\": \"删除此论点\",\n        \"content\": \"（从演讲中移除此论点）\",\n    \
+    \    \"recommended\": false,\n        \"reason\": \"\"\n      }\n    ]\n  }\n\
+    ]\n"
+  Judge:
+  - criterion: AI 推断内容生成了专属 suggestion，dimension = 「AI推断内容」，severity = major
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有对推断内容生成「Why层缺失」「真实案例不完整」等六维度内容审查 suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 推断内容所在 Slide 的非推断部分（big_number 布局的数字内容）未被误报
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段口语化说明了推断内容的风险（台上说不清楚），不是技术术语
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options 提供了三个具体处理方向（替换/暂保留/删除）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: '以下 slide-content.md 片段包含假问题：
+
+
+    ## 大开门 — 开场
+
+
+    **PPT 上放：**
+
+    布局：cover
+
+    监控体系建设实践
+
+
+    **演讲口头说：**
+
+    - 大家好，今天我来分享我们团队的监控体系建设实践。
+
+    - 我们团队面临的核心问题是：没有完善的监控体系、缺乏统一的告警管理机制、无法快速定位线上故障。
+
+    - 为了解决这些问题，我们从去年开始着手建设监控体系。
+
+    '
+  skill_type: analysis-review
+  notes: 验证假问题识别——「没有完善的监控体系」「缺乏统一的告警管理机制」「无法快速定位」使用否定词+名词短语描述问题，且是开场核心痛点，应生成 critical
+    suggestion
+  expected_output: "[\n  {\n    \"id\": \"content-001\",\n    \"reviewer_id\": \"\
+    content\",\n    \"dimension\": \"假问题\",\n    \"severity\": \"critical\",\n   \
+    \ \"context\": \"大开门——开场演讲口头说，核心痛点陈述\",\n    \"source_lines\": { \"start\": 8,\
+    \ \"end\": 12 },\n    \"original\": \"我们团队面临的核心问题是：没有完善的监控体系、缺乏统一的告警管理机制、无法快速定位线上故障\"\
+    ,\n    \"problem\": \"你说的「没有完善的监控体系」「缺乏告警管理机制」，这其实不是在描述问题，是在描述解决方案的反面——你在说「我们要建监控」，而不是让听众感受到「故障有多痛苦」。听众还没共鸣呢，你就开始说解决方案了。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"改为描述真实痛苦现象\",\n        \"content\": \"我们去年发生了 23 次 P1 故障，每次从告警触发到定位根因，平均要花\
+    \ 43 分钟，最长一次整整 4 个小时。凌晨 3 点接到电话，盯着几十个系统的日志，不知道从哪里开始查——你们有没有遇到过这种情况？\",\n     \
+    \   \"recommended\": true,\n        \"reason\": \"用真实数字和场景描述痛苦，听众会感同身受「我也遇到过」，而不是听你描述缺了什么\"\
+    \n      },\n      {\n        \"label\": \"B\",\n        \"description\": \"保留问题描述但改为现象式\"\
+    ,\n        \"content\": \"每次线上故障，我们平均要花 43 分钟才能定位根因——这 43 分钟里，业务损失一直在累积，团队一直在焦虑。\"\
+    ,\n        \"recommended\": false,\n        \"reason\": \"去掉了否定词，改为描述现象，但力度稍弱\"\
+    \n      },\n      {\n        \"label\": \"C\",\n        \"description\": \"保持原样\"\
+    ,\n        \"content\": \"（不修改）\",\n        \"recommended\": false,\n        \"\
+    reason\": \"\"\n      }\n    ]\n  }\n]\n"
+  Judge:
+  - criterion: 假问题识别触发正确：开场痛点使用否定词+名词短语组合，生成 critical suggestion
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: dimension 字段为「假问题」，不是「空姐效应」或其他维度
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段口语化解释了假问题的本质（描述的是解决方案反面，不是真实痛苦），未用「假问题识别」术语
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: options A 的 content 写出了具体改写后的开场话术（含真实数字、场景、互动提问），不是「建议改为现象式描述」
+    points: 25
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: '以下是一段质量较高的 slide-content.md 片段（无明显问题）：
+
+
+    ## Slide 12 — 告警覆盖率从 12% 提升到 99%，用了三个阶段
+
+
+    **论点类型：** 数据型
+
+
+    **PPT 上放：**
+
+    布局：timeline
+
+    第一阶段（Q1）：覆盖核心链路 → 12% → 45%
+
+    第二阶段（Q2）：覆盖所有在线服务 → 45% → 87%
+
+    第三阶段（Q3）：覆盖离线任务 → 87% → 99%
+
+
+    **演讲口头说：**
+
+    - 承接上一页：有了分级体系，下一步就是让监控真正覆盖到所有服务。
+
+    - 核心内容：我们分三个阶段推进，第一阶段先覆盖核心链路——这是最影响用户的那 20%，所以优先。三个月内覆盖率从 12% 提升到 45%。第二阶段扩展到所有在线服务，Q2
+    结束时达到 87%。第三阶段是离线任务，这部分接入标准不同，用了专门的适配方案，Q3 结束覆盖率达到 99%。
+
+    - 铺垫下一页：99% 的覆盖率只是基础，接下来说告警的质量——覆盖了不代表有效。
+
+    '
+  skill_type: analysis-review
+  notes: 验证 F1（误报健康内容）——这个 Slide 布局合理（timeline）、PPT 和演讲内容互补（PPT 是数字/阶段，口头说是 Why 层和细节）、有数字支撑，AI
+    不应为此页生成任何 suggestion
+  expected_output: "\U0001F4CA 文件统计：\n  slide-content.md : 22 行，约 7 页 Slide\n\n\U0001F50D\
+    \ 正在审查内容质量（6个维度）...\n\n对于 Slide 12「告警覆盖率从 12% 提升到 99%，用了三个阶段」：\n- ✅ 空姐效应：PPT 使用\
+    \ timeline 布局，内容为阶段+数字，无完整陈述句\n- ✅ 论点深度：演讲口头说中有「这是最影响用户的那 20%，所以优先」的 Why 层说明\n\
+    - ✅ 数字证据：有基线数字（12%）和每阶段具体数值，有对比\n- 未发现需要报告的问题\n\n**共 0 条建议（此页内容质量良好，无需修改）**\n"
+  Judge:
+  - criterion: 未对该 Slide 生成任何 suggestion（健康内容不误报，体现 F1 防护）
+    points: 34
+    tags:
+    - axis:accuracy
+  - criterion: 审查后输出说明或 0 条建议，不强凑建议数量
+    points: 33
+    tags:
+    - axis:accuracy
+  - criterion: 如果有其他 Slide 确实有问题，应针对那些 Slide 报告，但不包括此页
+    points: 33
+    tags:
+    - axis:accuracy
+- id: case_4
+  input: '以下 slide-content.md 片段包含「授人以渔」问题：
+
+
+    ## Slide 20 — 总结：我们的监控体系让服务可用性提升到 99.95%
+
+
+    **PPT 上放：**
+
+    布局：key_takeaway
+
+    监控覆盖率 99% | 故障定位 < 5 分钟 | 服务可用性 99.95%
+
+
+    **演讲口头说：**
+
+    - 核心内容：我们花了一年时间，把监控体系从零到一建了起来。覆盖率达到 99%，故障定位时间从 43 分钟压缩到不到 5 分钟，服务可用性达到了 99.95%。这是我们团队这一年最重要的成果之一。
+
+    - 铺垫下一页：以上就是我今天分享的全部内容，谢谢大家。
+
+    '
+  skill_type: analysis-review
+  notes: 验证授人以渔维度——核心分享论点只展示了成果数字，没有给听众可以带走复用的方法，应生成 major suggestion；同时关门「谢谢大家」也应被
+    review-structure 检测，此处只验证内容层面
+  expected_output: "[\n  {\n    \"id\": \"content-001\",\n    \"reviewer_id\": \"\
+    content\",\n    \"dimension\": \"授人以渔\",\n    \"severity\": \"major\",\n    \"\
+    context\": \"第4章·总结「监控体系成果汇总」——演讲口头说核心内容段\",\n    \"source_lines\": { \"start\"\
+    : 8, \"end\": 13 },\n    \"original\": \"我们花了一年时间，把监控体系从零到一建了起来...这是我们团队这一年最重要的成果之一\"\
+    ,\n    \"problem\": \"你讲了你们做到了 99.95% 可用性，但听众离场后不知道自己能做什么。他们会想：「这是你们团队的特殊情况，我们团队能用吗？」——如果没有可带走的方法论，这场分享的持续影响力就大打折扣。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"加入可复用的三步方法论\",\n        \"content\": \"演讲口头说改为：我们这一年的核心经验可以浓缩成三步：第一步，先从影响用户最大的\
+    \ 20% 核心链路开始，不要一开始就追求全覆盖；第二步，分级告警是核心，P1/P2/P3 分开处理，响应时间目标要明确写下来；第三步，工具链要统一，别让每个团队各搞一套。这三步放在任何团队都适用。\"\
+    ,\n        \"recommended\": true,\n        \"reason\": \"把你们的成功经验提炼成听众可以直接套用的步骤，听众离场后有明确的第一步可以执行\"\
+    \n      },\n      {\n        \"label\": \"B\",\n        \"description\": \"加入一个可带走的\
+    \ checklist\",\n        \"content\": \"在关门增加：「如果你们团队也在做监控建设，我给大家一个三项检查清单：□ 核心链路是否已有告警覆盖？□\
+    \ 告警是否分了 P1/P2/P3 级别？□ 故障响应 SLA 是否已经明文规定？——这三个问题，现在回去就可以问你的团队。」\",\n        \"\
+    recommended\": false,\n        \"reason\": \"checklist 更具体，但可能比方法论更快能用\"\n   \
+    \   },\n      {\n        \"label\": \"C\",\n        \"description\": \"保持原样\"\
+    ,\n        \"content\": \"（不修改）\",\n        \"recommended\": false,\n        \"\
+    reason\": \"\"\n      }\n    ]\n  }\n]\n"
+  Judge:
+  - criterion: 授人以渔维度触发正确：核心论点只有成果展示，无可复用方法论，生成 major suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: dimension 字段为「授人以渔」，分类准确
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了具体的三步方法论文字（可直接粘贴），不是「建议加入方法论」
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段用讲者视角描述风险（听众离场后不知道自己能做什么），不用「授人以渔维度缺失」术语
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: severity 为 major（核心论点缺乏方法论），不是 critical
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_5
+  input: '以下 slide-content.md 片段中数字证据不足：
+
+
+    ## Slide 7 — 引入 AI 代码审查工具显著提升了代码质量
+
+
+    **论点类型：** 方法论型
+
+
+    **PPT 上放：**
+
+    布局：bullet_list
+
+    - 引入 AI 代码审查工具
+
+    - 自动检测常见 Bug 类型
+
+    - 提升代码合规率
+
+
+    **演讲口头说：**
+
+    - 核心内容：我们去年引入了 AI 代码审查工具，对提交的代码进行自动检测。工具可以识别常见的 Bug 模式，包括空指针、资源未释放、逻辑错误等。效果非常明显，代码质量有了大幅提升，团队反馈也很正面。
+
+    '
+  skill_type: analysis-review
+  notes: 验证数字证据维度——「效果非常明显」「大幅提升」等模糊副词无具体数字，且成果陈述无基线对比，应生成 major suggestion
+  expected_output: "[\n  {\n    \"id\": \"content-001\",\n    \"reviewer_id\": \"\
+    content\",\n    \"dimension\": \"数字证据\",\n    \"severity\": \"major\",\n    \"\
+    context\": \"第2章·论点2.3「引入AI代码审查工具」——演讲口头说核心内容段\",\n    \"source_lines\": { \"\
+    start\": 10, \"end\": 16 },\n    \"original\": \"效果非常明显，代码质量有了大幅提升，团队反馈也很正面\"\
+    ,\n    \"problem\": \"「效果非常明显」「大幅提升」这种说法，讲了等于没讲——听众会在心里想：到底提升了多少？明显是多少？没有数字，你说什么程度的「明显」别人都不会信。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"补充具体数字（需要讲者填入真实数据）\",\n        \"content\": \"演讲口头说改为：「引入工具后，我们每周 Code Review\
+    \ 发现的 Bug 数量从平均 [X] 个降到了 [Y] 个，线上 Bug 中由 AI 工具在 Review 阶段拦截的比例达到了 [Z]%。」——请将 [X][Y][Z]\
+    \ 替换为实际数据。\",\n        \"recommended\": true,\n        \"reason\": \"具体数字让听众相信你的结论，没有数字的「大幅提升」是无效陈述\"\
+    \n      },\n      {\n        \"label\": \"B\",\n        \"description\": \"改用相对变化描述\"\
+    ,\n        \"content\": \"演讲口头说改为：「引入工具后，线上与代码质量相关的 Bug 数量同比减少了 [X]%，Code Review\
+    \ 的时间从平均 [A] 小时缩短到了 [B] 小时。」\",\n        \"recommended\": false,\n        \"reason\"\
+    : \"相对值也可以，但最好配合绝对值基线\"\n      },\n      {\n        \"label\": \"C\",\n      \
+    \  \"description\": \"保持原样\",\n        \"content\": \"（不修改）\",\n        \"recommended\"\
+    : false,\n        \"reason\": \"\"\n      }\n    ]\n  }\n]\n"
+  Judge:
+  - criterion: 数字证据维度触发正确：重要论点使用「效果非常明显」「大幅提升」等模糊副词无数字，生成 major suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: dimension 字段为「数字证据」，分类准确（不是「Why层」或「授人以渔」）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了具体的数字占位结构（[X][Y][Z]），说明了需要填入什么类型的数据
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段口语化（「讲了等于没讲」），未用「数字证据缺失」等方法论术语
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: severity 为 major（重要中间论点无数字），不是 critical
+    points: 20
+    tags:
+    - axis:accuracy

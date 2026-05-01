@@ -1,0 +1,224 @@
+testcases:
+- id: case_0
+  input: '以下是一个 slide-content.md 的核心数字页片段，使用了 bullet_list 布局：
+
+
+    ## Slide 7 — 故障定位效率提升90%
+
+    **论点类型：** 数据型
+
+    **PPT 上放：**
+
+    布局：bullet_list
+
+    - 分级告警接入前：平均定位时间 43 分钟
+
+    - 分级告警接入后：平均定位时间 3 分钟
+
+    - 提升幅度：93%
+
+
+    **演讲口头说：**
+
+    这个数字是我们整个监控体系建设最核心的成果。43分钟是什么概念？凌晨两点收到告警，等你定位到问题，差不多要天亮了。现在3分钟能搞定，差距就在于数据链路打通之后的精准归因。
+
+
+    请审查该 Slide 的布局选择是否合理。
+
+    '
+  skill_type: analysis-review
+  notes: 验证D1A决策（完整新内容）——数字对比用 bullet_list 严重削弱视觉冲击，应换成 before_after 或 big_number，且
+    options A 必须写出完整新的'PPT上放'内容
+  expected_output: "\U0001F50D 正在审查布局质量（3个维度）...\n\n## 布局审查结果 — qcon-demo\n\n| # |\
+    \ 维度 | 强度 | 位置 | 问题摘要 |\n|---|------|------|------|---------|\n| layout-001 |\
+    \ 布局匹配 | \U0001F7E1 major | Slide 7「故障定位效率提升90%」 | 三个数字并排在 bullet 列表里，放映时观众需要逐行读完才能感受到\"\
+    43分钟→3分钟\"的冲击——这个对比应该一眼就看到，不是读完才明白 |\n\nlayout-001 建议选项：\nA. 换成 `before_after`\
+    \ 布局：\n   \"before_after 布局：左侧【接入前】大字显示「43分钟」，右侧【接入后】大字显示「3分钟」，中间箭头标注「↓ 93%」，下方一行小字：「平均故障定位时间，基于Q3-Q4共48次故障数据」\"\
+    \n   推荐理由：before_after 布局让对比一眼可见，43分钟和3分钟的视觉冲击同时击中听众，不需要读完才明白\nB. 换成 `big_number`\
+    \ 布局（如果要强调降幅）：\n   \"big_number 布局：中央超大字显示「43 → 3」，下方说明「故障定位时间（分钟），降幅 93%」，右下角数据来源说明\"\
+    \nC. 保持 bullet_list（不修改）\n\n✅ 审查完成，JSON 已写入：~/.pptdog/.../layout-20260422T100000.json\n"
+  Judge:
+  - criterion: 生成了 dimension='布局匹配' 且 severity='major' 的 suggestion（数字对比用 bullet_list）
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: options A 的 content 写出了完整新布局描述（before_after 布局名 + 左侧内容 + 右侧内容 + 箭头标注），而非只写布局名
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段用口语描述（不含'布局词汇违规/before_after必须使用'等术语）
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 新布局内容来自该页现有的 PPT 正文内容（43分钟/3分钟/93%）
+    points: 25
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: '一份演讲的 slide-content.md 共有 20 张 Slide，布局分布如下：
+
+    - bullet_list: 14 张
+
+    - big_number: 2 张
+
+    - section_divider: 2 张
+
+    - before_after: 1 张
+
+    - case_study: 1 张
+
+
+    请审查布局多样性并给出建议。（同时检查封面、封底布局）
+
+    注：第1张是封面（使用 bullet_list），最后一张是大关门（使用 bullet_list 总结三条要点）。
+
+    '
+  skill_type: analysis-review
+  notes: 验证D2B阈值（>60%触发 major）+ F2关键页面检查 + F3统计打印——bullet_list 占 70% 超过阈值，封面和封底均使用
+    bullet_list 应各生成一条 major suggestion
+  expected_output: "\U0001F4CA 布局分布统计：\n  bullet_list:     14 张 (70%)  [⚠️ 超过阈值60%]\n\
+    \  big_number:       2 张 (10%)\n  section_divider:  2 张 (10%)\n  before_after:\
+    \     1 张  (5%)\n  case_study:       1 张  (5%)\n\n## 布局审查结果 — qcon-demo\n\n| #\
+    \ | 维度 | 强度 | 位置 | 问题摘要 |\n|---|------|------|------|---------|\n| layout-001\
+    \ | 关键页面 | \U0001F7E1 major | 第1页（封面）| 封面是听众第一眼看到的，用 bullet_list 显得很普通，缺少开场的专业仪式感\
+    \ |\n| layout-002 | 关键页面 | \U0001F7E1 major | 最后1页（大关门）| 大关门用 bullet_list 总结三条要点，结束语没有力量——最后一页应该让听众感觉\"\
+    这场分享很有设计感\" |\n| layout-003 | 多样性 | \U0001F7E1 major | 全局（70% bullet_list）| 20张\
+    \ Slide 里有14张 bullet_list，从第3张开始听众视觉会进入疲劳状态，建议优先替换数字页和对比页 |\n\nlayout-001（封面）建议：\n\
+    A. 换成 cover 布局：\n   \"cover 布局：大标题「监控体系建设：从 43 分钟到 3 分钟的故障响应革命」，副标题「张三 · 基础平台团队\
+    \ · 2026年4月」，背景使用深色或公司品牌色\"\n\nlayout-002（大关门）建议：\nA. 换成 key_takeaway 布局：\n  \
+    \ \"key_takeaway 布局：中央一句金句「监控不是工具问题，是数据链路问题」，下方三个图标对应三条可带走的行动：①先建覆盖率 ②再建分级 ③最后做自动化\"\
+    \n"
+  Judge:
+  - criterion: Console 输出包含布局分布统计表（各布局类型及百分比），且正确标注 bullet_list 超过阈值
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 针对封面（第1页 bullet_list）生成了 dimension='关键页面' 的 major suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 针对封底（大关门 bullet_list）生成了 dimension='关键页面' 的 major suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 针对布局多样性（70%>60%）生成了 major suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 封底的 options A 写出了具体金句文字（来自演讲核心结论），而非'放一句金句'
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: '以下是演讲中一个流程步骤页和一个完整案例页，均使用 bullet_list：
+
+
+    ### Slide 9 — 告警分级三步法
+
+    **论点类型：** 方法论型
+
+    **PPT 上放：**
+
+    布局：bullet_list
+
+    - 第一步：盘点所有告警类型，按影响范围分P1/P2/P3
+
+    - 第二步：为每个级别设定不同的响应流程和升级路径
+
+    - 第三步：上线后持续调优，每两周review一次分级准确率
+
+
+    ### Slide 11 — 服务宕机案例
+
+    **论点类型：** 案例型
+
+    **PPT 上放：**
+
+    布局：bullet_list
+
+    - 背景：2024年3月某核心服务宕机
+
+    - 冲突：无告警分级，200条告警同时触发，无法区分优先级
+
+    - 解决：临时接入分级规则，P1只剩3条
+
+    - 结果：定位时间从43分钟降到8分钟
+
+
+    请分别审查两个 Slide 的布局选择。
+
+    '
+  skill_type: analysis-review
+  notes: 验证流程型（process_chevron）和案例型（case_study）的布局识别——options 必须写出完整新内容
+  expected_output: "## 布局审查结果 — qcon-demo\n\n| # | 维度 | 强度 | 位置 | 问题摘要 |\n|---|------|------|------|---------|\n\
+    | layout-004 | 布局匹配 | \U0001F7E1 major | Slide 9「告警分级三步法」 | 三步流程用 bullet_list\
+    \ 列出来，步骤之间没有箭头和顺序感——听众看不出\"这是必须按顺序走的三步\"，还是\"随便选一步做\" |\n| layout-005 | 布局匹配 |\
+    \ \U0001F7E1 major | Slide 11「服务宕机案例」 | 案例有背景/冲突/解决/结果四个要素，用 bullet 列点会显得很平，case_study\
+    \ 布局可以把这个故事的起伏做出来 |\n\nlayout-004 建议选项：\nA. 换成 process_chevron 布局：\n   \"process_chevron\
+    \ 布局：三个箭头模块，①盘点告警类型→分级（P1/P2/P3）②设定响应流程→每级不同升级路径③持续调优→每两周review分级准确率。箭头强调「必须按顺序」的执行感\"\
+    \n\nlayout-005 建议选项：\nA. 换成 case_study 布局：\n   \"case_study 布局（四格）：【背景】2024年3月核心服务宕机\
+    \ / 【冲突】200条告警同时触发，P1/P2/P3全混在一起，无法区分优先级 / 【解决】临时接入分级规则，P1只保留3条 / 【结果】定位时间43分钟→8分钟，缩短81%\"\
+    \n"
+  Judge:
+  - criterion: Slide 9（3步流程）生成了 major suggestion，推荐 process_chevron
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: Slide 11（4要素案例）生成了 major suggestion，推荐 case_study
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 两个 suggestion 的 options A 均写出了完整新布局内容（布局名+各格具体内容）
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 布局内容直接来源于原 Slide 的 PPT 正文，不是新编内容
+    points: 25
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: '以下演讲共12张 Slide，布局分布：
+
+    - bullet_list: 5 张 (42%)
+
+    - big_number: 3 张 (25%)
+
+    - before_after: 2 张 (17%)
+
+    - section_divider: 2 张 (17%)
+
+
+    封面（Slide 1）使用 cover 布局。
+
+    封底（Slide 12）使用 key_takeaway 布局。
+
+
+    请进行布局多样性审查。
+
+    '
+  skill_type: analysis-review
+  notes: 验证D2B阈值的正向案例——bullet_list 42% 在 40-60% 区间，应触发 minor 建议；封面封底布局正确，不应有关键页面问题
+  expected_output: "\U0001F4CA 布局分布统计：\n  bullet_list:     5 张 (42%)  [\U0001F7E1\
+    \ 40-60%区间，建议适当多样化]\n  big_number:      3 张 (25%)\n  before_after:    2 张 (17%)\n\
+    \  section_divider: 2 张 (17%)\n\n关键页面检查：\n  封面（Slide 1）：cover 布局 ✅\n  封底（Slide\
+    \ 12）：key_takeaway 布局 ✅\n\n## 布局审查结果 — qcon-demo\n\n| # | 维度 | 强度 | 位置 | 问题摘要\
+    \ |\n|---|------|------|------|---------|\n| layout-001 | 多样性 | \U0001F7E2 minor\
+    \ | 全局（42% bullet_list）| 布局多样性总体不错，但5张 bullet_list 里如果有数字对比或流程步骤的内容，可以考虑换成更合适的布局，进一步增强视觉效果\
+    \ |\n\n**共 1 条建议：major 0 / minor 1**\n"
+  Judge:
+  - criterion: 'bullet_list 42% 触发了 minor（而非 major），阈值判断正确（D2B: >60%=major, 40-60%=minor）'
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 封面 cover 和封底 key_takeaway 均为合格，无关键页面 suggestion
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: Console 打印了布局分布统计表和各布局类型占比
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 整体建议数量合理（不强凑，1条 minor 就够了）
+    points: 25
+    tags:
+    - axis:accuracy

@@ -1,0 +1,257 @@
+testcases:
+- id: case_0
+  input: '以下 slide-content.md 的大开门用了「凌晨3点故障告警」的真实故事开场，但后续章节和大关门中完全没有回扣这个开门故事。
+
+
+    ## 大开门
+
+
+    **演讲口头说：**
+
+    2023 年 8 月的一个凌晨三点，我接到了一个告警电话。那次故障持续了 4 小时，影响了 20 万用户。我当时心里只有一个念头：下次再也不能这样了。今天我来分享，我们是怎么把故障定位时间从
+    43 分钟压缩到 3 分钟的。
+
+
+    ## 大关门
+
+
+    **演讲口头说：**
+
+    总结一下，我们通过监控体系建设、告警分级和自动化运维，实现了服务可用性从 99.5% 到 99.95% 的提升。这套体系已经在生产环境运行了一年，效果稳定。感谢大家的聆听，有问题欢迎会后来找我。
+
+
+    details.md 中开门故事的对应条目：
+
+    §开篇故事：2023年8月凌晨3点故障，持续4小时，影响20万用户，定位耗时43分钟
+
+    '
+  skill_type: analysis-review
+  notes: 验证 Call Back 识别——开门用了具体故事（凌晨3点、43分钟、20万用户），但大关门只是普通总结，未回扣开门素材。应生成 Call Back
+    major suggestion，options 必须写出具体的回扣话术（含前置素材引用+当前呼应）
+  expected_output: "\U0001F50D 正在审查演讲技巧机会（4个维度）...\n\n[\n  {\n    \"id\": \"craft-001\"\
+    ,\n    \"reviewer_id\": \"craft\",\n    \"dimension\": \"Call Back\",\n    \"\
+    severity\": \"major\",\n    \"type\": \"opportunity\",\n    \"context\": \"大关门——与大开门故事的回扣机会\"\
+    ,\n    \"source_lines\": { \"start\": 28, \"end\": 35 },\n    \"original\": \"\
+    总结一下，我们通过监控体系建设、告警分级和自动化运维...\",\n    \"problem\": \"你开头用了一个很好的故事——凌晨三点那次 4 小时故障。但讲完这么多内容后，关门时完全没有回扣这个故事。好的\
+    \ Call Back 能让听众感觉「原来一开始就是铺垫」，你现在错过了这个让整场演讲产生设计感的机会。\",\n    \"options\": [\n\
+    \      {\n        \"label\": \"A\",\n        \"description\": \"在大关门回扣凌晨三点的故障故事\"\
+    ,\n        \"content\": \"演讲口头说改为：「还记得我开头说的那次凌晨三点的故障吗？4 小时，20 万用户，43 分钟找不到根因。今天这套体系建好之后，同样级别的故障，我们的定位时间压到了\
+    \ 3 分钟。如果当时有这套体系，那次故障可能 20 分钟就结束了。下次凌晨三点再接到电话，我的心情会完全不一样。」\",\n        \"recommended\"\
+    : true,\n        \"reason\": \"用开头的故事作结尾，让听众感觉「整场演讲就是在回答开头的那个问题」，设计感最强\"\n   \
+    \   },\n      {\n        \"label\": \"B\",\n        \"description\": \"在最后一章小关门就开始回扣\"\
+    ,\n        \"content\": \"在最后一章小关门加：「有了这套体系，那种凌晨三点接到告警、不知道从哪里查起的感觉，再也不会有了。」\"\
+    ,\n        \"recommended\": false,\n        \"reason\": \"提前回扣，大关门再做一次更完整的升华\"\
+    \n      },\n      {\n        \"label\": \"C\",\n        \"description\": \"保持原样\"\
+    ,\n        \"content\": \"（不修改）\",\n        \"recommended\": false,\n        \"\
+    reason\": \"\"\n      }\n    ],\n    \"recommended\": \"A\"\n  }\n]\n\n## 演讲技巧审查结果\
+    \ — demo-slug\n\n| # | 维度 | 强度 | 位置 | 机会摘要 |\n|---|------|------|------|---------|\n\
+    | craft-001 | Call Back | \U0001F7E1 major | 大关门 | 开门故事（凌晨3点）未在关门回扣 |\n\n**共 1\
+    \ 条机会：major 1 / minor 0**\n\n✅ 审查完成，JSON 已写入：~/.pptdog/.../craft-<ts>.json\n"
+  Judge:
+  - criterion: 识别出大开门故事（凌晨3点、43分钟、20万用户）是强价值可回扣素材
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 检测到大关门未回扣开门故事，生成 dimension=「Call Back」、severity=major 的 suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 的 content 写出了完整的回扣话术，包含「还记得我开头说的...现在有了...」的完整结构（验证 F2 防护）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 回扣话术包含前置素材的具体细节（凌晨三点/4小时/20万用户/43分钟）和当前呼应（3分钟）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段说明了错过 Call Back 的损失（设计感机会），未用「Call Back 缺失」术语
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: '以下是一个没有 details.md 文件的场景，slide-content.md 中某论点停在表层：
+
+
+    ## Slide 9 — 引入 SRE 文化让团队稳定性意识显著提升
+
+
+    **演讲口头说：**
+
+    - 核心内容：我们引入了 SRE 文化，推动团队树立稳定性优先的意识。通过一系列培训和组织变革，团队对稳定性的重视程度明显提高。这是整个监控体系建设中最难的部分——文化变革永远比技术变革难。
+
+
+    details.md 文件不存在（项目只有 slide-content.md 和 mindmap.md）
+
+    '
+  skill_type: analysis-review
+  notes: 验证 F3（无 details 素材时不生成递进建议）——论点停在表层，但 details.md 不存在，AI 不应强行生成递进建议（D3A 决策），应在状态摘要标注「details.md
+    不存在，跳过递进素材检查」，不产生编造的第2层内容
+  expected_output: '🔍 正在审查演讲技巧机会（4个维度）...
+
+
+    ⚠️ details.md 不存在，跳过递进素材检查（维度1：递进式深挖需要 details.md 中的深层素材作为依据，无法生成无中生有的递进建议）
+
+
+    对于 Slide 9「引入 SRE 文化」论点：
+
+    - 演讲口头说内容停在了「文化变革」的表层结论
+
+    - 由于 details.md 不存在，无法确认是否有更深层素材支撑递进
+
+    - 不生成递进建议（避免推荐讲者展开一个可能凭空编造的第2层）
+
+
+    [Call Back、暗线、方法论楔子维度继续正常检查...]
+
+    '
+  Judge:
+  - criterion: 检测到 details.md 不存在，在状态摘要中明确标注「跳过递进素材检查」（D3A 防护验证）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有为该论点生成递进式建议（无论是2层还是3层）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有 AI 自行编造第2层内容（如「底层逻辑是...」之类的推断）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 其他维度（Call Back/暗线/方法论楔子）继续正常执行，不是因为 details 缺失就全部停止
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: severity 不存在 critical（review-craft 的最高 severity 是 major）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: '以下 slide-content.md 演讲关门缺少可带走工具和延伸讨论入口：
+
+
+    ## 大关门
+
+
+    **PPT 上放：**
+
+    布局：closing
+
+    一切变化都始于第一个监控告警
+
+
+    **演讲口头说：**
+
+    - 核心内容：今天我们讲了监控体系建设的全过程——从零覆盖率到99%，从43分钟故障定位到3分钟。这一年我们走了很多弯路，但最终建成了一套可靠的监控体系。希望今天的分享对大家有所启发。
+
+    - 结束语：谢谢大家！
+
+
+    details.md 中记录了完整的三步建设方法论：
+
+    §方法论：第一步锁定核心链路覆盖、第二步建立告警分级SLA、第三步引入自动化运维。
+
+    '
+  skill_type: analysis-review
+  notes: 验证方法论楔子维度——关门有升华句（「一切变化始于第一个告警」）但缺少可带走工具（无 checklist/口诀/框架）和延伸讨论入口（无「欢迎会后来聊」/二维码）。两者都缺应生成
+    major suggestion，且工具内容必须基于演讲中已有的三步方法论，不是通用框架
+  expected_output: "[\n  {\n    \"id\": \"craft-001\",\n    \"reviewer_id\": \"craft\"\
+    ,\n    \"dimension\": \"方法论楔子\",\n    \"severity\": \"major\",\n    \"type\":\
+    \ \"opportunity\",\n    \"context\": \"大关门——可带走工具和延伸讨论入口均缺失\",\n    \"source_lines\"\
+    : { \"start\": 45, \"end\": 52 },\n    \"original\": \"希望今天的分享对大家有所启发。谢谢大家！\"\
+    ,\n    \"problem\": \"你花了 45 分钟分享了很好的内容，但最后什么都没给听众带走。他们听完会想：「很有启发，但我回去从哪里开始做？」没有可带走的工具，今天的演讲三天后就被遗忘了。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"加「可带走的三步口诀」Slide\",\n        \"content\": \"在大关门前新增一页 Slide：\\n布局：checklist\\\
+    n标题：监控体系建设三步走（你现在就能做的）\\n□ 第一步：锁定核心链路——找出影响用户最大的 20% 服务，先覆盖这些\\n□ 第二步：分级告警——P1/P2/P3\
+    \ 三级，每级写明响应 SLA（白纸黑字）\\n□ 第三步：自动化运维——先做告警自动路由，再考虑自愈\\n\\n演讲口头说加：「这三步，是我们这一年走过的路。你们回去今天就可以从第一步开始。」\"\
+    ,\n        \"recommended\": false,\n        \"reason\": \"工具 Slide 让听众有具体的行动起点\"\
+    \n      },\n      {\n        \"label\": \"B\",\n        \"description\": \"加延伸讨论入口\"\
+    ,\n        \"content\": \"演讲口头说结尾加：「如果你们团队也在做类似的事，或者觉得我分享的某个环节想深聊，欢迎会后来找我。我的微信在最后一页。踩过的坑，聊起来比\
+    \ PPT 详细多了。」\",\n        \"recommended\": false,\n        \"reason\": \"延伸入口建立后续影响力\"\
+    \n      },\n      {\n        \"label\": \"C\",\n        \"description\": \"两者都加（工具\
+    \ Slide + 延伸入口话术）\",\n        \"content\": \"按 A 选项新增工具 Slide，同时在演讲口头说中加入 B 选项的延伸入口话术\"\
+    ,\n        \"recommended\": true,\n        \"reason\": \"工具让听众有行动起点，延伸入口让讲者能持续影响听众——两者配合效果最好\"\
+    \n      }\n    ],\n    \"recommended\": \"C\"\n  }\n]\n"
+  Judge:
+  - criterion: 检测到关门缺少可带走工具和延伸讨论入口（两者都缺），生成 major suggestion（而非 minor）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: dimension 为「方法论楔子」，severity 为 major（两类都缺）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A（工具 Slide）的内容基于演讲中已有的三步方法论（锁定核心链路/分级告警/自动化运维），而非通用「3步方法论」框架（F5
+      防护验证）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options B 写出了具体的延伸入口话术文字（不是「建议加联系方式」）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段口语化描述损失（三天后就被遗忘），未用「方法论楔子缺失」术语
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: '以下 slide-content.md 演讲有天然的「三阶段路线图」素材，非常适合做暗线，但当前没有任何暗线设计：
+
+
+    章节结构：
+
+    - 第1章：基础设施监控（P0，已完成）
+
+    - 第2章：应用层监控（P1，已完成）
+
+    - 第3章：业务层监控（P2，进行中）
+
+    - 大关门：完整监控金字塔
+
+
+    details.md 中有路线图素材：
+
+    §路线图：三层监控金字塔（基础设施→应用→业务），每层依赖下层
+
+    '
+  skill_type: analysis-review
+  notes: 验证暗线识别（D2B）——三章节刚好对应监控金字塔的三层，天然路线图素材（D2B 规定有天然素材时生成 major），应识别并生成暗线 suggestion，options
+    必须标注改动成本（新增页数/修改位置数量）
+  expected_output: "[\n  {\n    \"id\": \"craft-001\",\n    \"reviewer_id\": \"craft\"\
+    ,\n    \"dimension\": \"暗线\",\n    \"severity\": \"major\",\n    \"type\": \"\
+    opportunity\",\n    \"context\": \"全场结构——三章节内容与监控金字塔三层高度对应\",\n    \"source_lines\"\
+    : { \"start\": 1, \"end\": 90 },\n    \"original\": \"第1章：基础设施监控 → 第2章：应用层监控 →\
+    \ 第3章：业务层监控\",\n    \"problem\": \"你的三章内容刚好对应监控金字塔的三层（基础设施→应用→业务），这是天然的暗线素材。现在每章之间没有视觉上的连接，听众不会意识到「原来这三章是在逐层搭建一个完整的体系」。如果设计一条暗线，大关门的「完整金字塔揭晓」会非常有冲击力。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"完整暗线：每章小关门新增「金字塔进度」Slide\",\n        \"content\": \"每章小关门各新增 1 页「监控金字塔进度」Slide（共新增\
+    \ 3 页，修改 3 处小关门演讲口头说）：\\n- 第1章小关门：金字塔图，第一层「基础设施」点亮，上方两层灰色\\n  口头说加：「第一层打好了，接下来我们往上搭。」\\\
+    n- 第2章小关门：金字塔图，前两层点亮，第三层灰色\\n  口头说加：「两层了。还差最关键的一层——业务层。」\\n- 大关门：完整金字塔全部点亮\\n\
+    \  口头说加：「三层都有了——这就是我们的监控金字塔。」\",\n        \"recommended\": true,\n        \"reason\"\
+    : \"视觉积累感最强，大关门揭晓时听众会感受到「原来一直在铺垫这个」\"\n      },\n      {\n        \"label\": \"\
+    B\",\n        \"description\": \"轻量暗线：不新增 Slide，只在演讲口头说中埋线\",\n        \"content\"\
+    : \"只修改各章小关门演讲口头说，不新增 Slide（修改 3 处，不新增页数）：\\n- 第1章小关门加：「监控金字塔的第一层打好了。」\\n- 第2章小关门加：「两层了，还差一层就完整了。」\\\
+    n- 大关门加：「三层都有了——监控金字塔建成。」\",\n        \"recommended\": false,\n        \"reason\"\
+    : \"改动成本低，但视觉积累感不如 A 选项强\"\n      },\n      {\n        \"label\": \"C\",\n   \
+    \     \"description\": \"保持原样\",\n        \"content\": \"（不修改）\",\n        \"\
+    recommended\": false,\n        \"reason\": \"\"\n      }\n    ],\n    \"recommended\"\
+    : \"A\"\n  }\n]\n"
+  Judge:
+  - criterion: 识别出三章节与监控金字塔的天然对应关系，生成 major suggestion（有天然路线图素材时为 major）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 标注了改动成本：新增 3 页 + 修改 3 处演讲口头说（F4 防护验证）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了每章小关门的具体暗线推进方式（金字塔图状态变化），不是「每章加一页进度图」
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options B 提供了轻量替代方案（不新增页数）且说明了改动位置（修改 3 处）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: severity 为 major（有天然素材），dimension 为「暗线」
+    points: 20
+    tags:
+    - axis:accuracy

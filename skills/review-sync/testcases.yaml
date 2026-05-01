@@ -1,0 +1,233 @@
+testcases:
+- id: case_0
+  input: '当前项目状态：
+
+    - ppt-hours.md: ✅ 存在
+
+    - mindmap.md: ✅ 存在
+
+    - details.md: ❌ 不存在
+
+    - slide-content.md: ✅ 存在
+
+
+    用户运行 /review-sync，触发四文件同步检查。
+
+    '
+  skill_type: analysis-review
+  notes: 验证D2B决策（必须四文件齐全才运行）+ F1失败模式的反面——details.md 缺失时必须停止运行并给出具体提示，不能静默继续生成 suggestion
+  expected_output: "\U0001F50D 正在检查四文件同步状态...\n\n\U0001F4CB 文件存在性检查：\n  ppt-hours.md\
+    \     : ✅ 存在\n  mindmap.md       : ✅ 存在\n  details.md       : ❌ 不存在\n  slide-content.md\
+    \ : ✅ 存在\n\n⛔ review-sync 需要四个文件全部存在才能运行。\n\n缺失文件：\n  - details.md（需先运行 /plan-details\
+    \ 生成素材库）\n\n请先完成 /plan-details 步骤，生成 details.md 后，再运行 /ppt-review 触发完整同步检查。\n\n\
+    （已停止运行，未生成任何审查建议）\n"
+  Judge:
+  - criterion: 输出了 ⛔ 停止运行的提示（而非继续生成 suggestion）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 明确列出了缺失文件名（details.md）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 提示了该文件对应的 pptdog 步骤（/plan-details）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未生成任何 suggestion（suggestions 列表为空或不存在）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 不静默跳过缺失文件的维度继续审查其他维度
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: '四文件均存在。发现以下不一致：
+
+
+    mindmap.md 中，第2章第1个论点标题：「告警分级策略设计」
+
+
+    details.md 中，对应论点标题：「分级告警策略」
+
+
+    两者标题文字不同，不确定是否是同一个论点。
+
+
+    请生成对应的 sync suggestion。
+
+    '
+  skill_type: analysis-review
+  notes: 验证D1A决策（两个方向都展示）——options 必须展示A（以mindmap为准改details）和B（以details为准改mindmap）两个具体操作方向，且各有文件名+位置+具体改动内容
+  expected_output: "✅ 四文件均存在，开始同步检查\n\n## 四文件同步结果 — qcon-demo\n\n| # | 维度 | 严重程度 |\
+    \ 位置 | 问题摘要 |\n|---|------|---------|------|---------|\n| sync-001 | mindmap-details同步\
+    \ | \U0001F7E2 minor | 第2章·论点2.1 | mindmap 叫「告警分级策略设计」，details 里叫「分级告警策略」——一字之差，不确定是笔误还是有意改了名字\
+    \ |\n\nsync-001 详情：\ndiff:\n  file_a (mindmap.md): \"### 告警分级策略设计\"\n  file_b\
+    \ (details.md): \"## 分级告警策略\"\n\n选项：\nA. 以 mindmap 为准，更新 details：\n   具体操作：在 details.md\
+    \ §2.1 节，将标题从「分级告警策略」改为「告警分级策略设计」（第XX行）\n   推荐理由：mindmap 是经过讲者确认的结构，通常是更规范的最终版本\n\
+    \nB. 以 details 为准，更新 mindmap：\n   具体操作：在 mindmap.md 第2章，将论点标题从「告警分级策略设计」改为「分级告警策略」（第XX行）\n\
+    \nC. 保持两边不同（有意区分）：\n   两个文件使用不同名称是有意为之，无需同步\n"
+  Judge:
+  - criterion: 生成了 diff 字段，展示了 mindmap.md 和 details.md 中各自的原文
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了具体操作（文件名 + 位置 + 改成什么），而非'以mindmap为准'
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options B 写出了反向操作（具体改 mindmap 的哪个位置）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 两个方向都展示，而非只给一个推荐方向
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: severity 正确为 minor（标题文字不一致）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: '四文件均存在。发现以下不一致：
+
+
+    mindmap.md 第3章论点3.2「故障响应SOP流程」存在，有完整子论点结构。
+
+
+    details.md 第3章对应位置：论点3.2 内容完全为空，没有任何案例、数据或描述。
+
+
+    请生成对应的 sync suggestion。
+
+    '
+  skill_type: analysis-review
+  notes: 验证维度2 mindmap-details同步——mindmap有论点但details完全空，这是最严重的不同步（major），且options需要展示两个具体方向
+  expected_output: "## 四文件同步结果 — qcon-demo\n\n| # | 维度 | 严重程度 | 位置 | 问题摘要 |\n|---|------|---------|------|---------|\n\
+    | sync-002 | mindmap-details同步 | \U0001F7E1 major | 第3章·论点3.2「故障响应SOP流程」 | mindmap\
+    \ 里这个论点有完整的结构，但 details.md 对应位置是空的——讲到这里的时候，AI 没有任何素材可以用，可能会生成很多占位符 |\n\nsync-002\
+    \ 详情：\ndiff:\n  file_a (mindmap.md): \"### 3.2 故障响应SOP流程\\n- 子论点：告警触发后的标准动作\\\
+    n- 子论点：升级机制与超时处理\\n- 子论点：事后复盘与规则优化\"\n  file_b (details.md): \"（此论点内容为空）\"\n\n\
+    选项：\nA. 在 details.md 中补充这个论点的内容：\n   具体操作：在 details.md §3.2 节补充以下字段：\n   - case（案例）：填写一个具体的故障响应案例（背景/冲突/解决/结果）\n\
+    \   - data（数据）：补充SOP执行前后的效率对比数字\n   - why（为什么）：说明为什么这个SOP比之前的临时处理方式更好\n   推荐理由：details\
+    \ 是 slide-content 的唯一素材来源，空的论点会导致生成占位符\n\nB. 从 mindmap 中删除这个论点：\n   具体操作：在 mindmap.md\
+    \ 第3章删除「### 3.2 故障响应SOP流程」及其三个子论点（确认该论点已不再需要）\n"
+  Judge:
+  - criterion: 生成了 severity='major' 的 suggestion（mindmap有但details完全空）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: diff 字段正确展示了 mindmap 的完整结构和 details 的空状态
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了具体需要补充的字段（case/data/why），而非'请补充内容'
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options B 写出了具体删除操作（在 mindmap 删除哪个节点）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 两个方向都展示（D1A）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: '四文件均存在。四文件内容如下（简化）：
+
+
+    ppt-hours.md 听众期待：「听完能带走一套可落地的告警分级方案，包括分级标准和实施步骤」
+
+
+    slide-content.md 中，关门（最后一页）的演讲口头说：
+
+    「以上就是我们这一年在监控建设上的实践。谢谢大家。」
+
+
+    关门页没有提供任何可操作的告警分级方案或工具，与听众期待有明显缺口。
+
+
+    请对 ppt-hours→slide-content 的一致性进行检查。
+
+    '
+  skill_type: analysis-review
+  notes: 验证维度1（ppt-hours→slide-content听众匹配）——听众期待'可落地的告警分级方案'，但slide-content关门完全没有对应落点，应生成
+    major suggestion
+  expected_output: "## 四文件同步结果 — qcon-demo\n\n| # | 维度 | 严重程度 | 位置 | 问题摘要 |\n|---|------|---------|------|---------|\n\
+    | sync-003 | ppt-hours匹配 | \U0001F7E1 major | 关门页（最后一页）vs ppt-hours 听众期待 | ppt-hours\
+    \ 里说听众要带走\"一套可落地的告警分级方案包括步骤\"，但 slide-content 的关门只有\"谢谢大家\"——听众听完了，拿不走任何可以马上用的东西\
+    \ |\n\nsync-003 详情：\ndiff:\n  file_a (ppt-hours.md 听众期待): \"听完能带走一套可落地的告警分级方案，包括分级标准和实施步骤\"\
+    \n  file_b (slide-content.md 关门): \"以上就是我们这一年在监控建设上的实践。谢谢大家。\"\n\n选项：\nA. 在 slide-content\
+    \ 关门页补充可带走的工具：\n   在关门演讲口头说前加入：「最后给大家一个可以直接带走用的清单。P1/P2/P3的分级标准：P1是影响用户可用性的，P2是影响部分功能的，P3是内部监控的。第一步：下周和你们的核心业务方对齐P1的范围，两小时搞定。第二步：先接入5个最核心服务的告警，不要一上来全接。第三步：两周后做第一次review。想要详细的实施checklist，会后找我要。」\n\
+    \nB. 更新 ppt-hours 的听众期待描述（如果这场演讲不打算提供工具）：\n   将听众期待改为：「听完能了解告警分级的核心思路和我们踩过的坑」（不承诺可落地工具）\n"
+  Judge:
+  - criterion: 生成了 severity='major' 的 ppt-hours↔slide-content 不一致 suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: diff 字段展示了 ppt-hours 的听众期待原文 vs slide-content 关门的实际内容
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了具体的补充内容（分级标准 + 三步清单 + 会后资源入口）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options B 提供了反向操作（更新 ppt-hours 期待描述）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 两个方向都展示（D1A）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_4
+  input: '四文件均存在，各论点均有完整素材，无明显不一致。
+
+
+    mindmap.md: 3章12个论点，全部有对应 details 内容
+
+    details.md: 12个论点均有内容，标题与 mindmap 一致
+
+    slide-content.md: 12个论点均有对应 Slide，数字与 details 一致
+
+    ppt-hours.md: 听众期待与 slide-content 内容对应
+
+
+    请运行同步检查，生成全局快照。
+
+    '
+  skill_type: analysis-review
+  notes: 验证维度4全局快照——即使四文件高度一致，也必须生成至少1条 suggestion（全局快照），不允许输出0条
+  expected_output: "✅ 四文件均存在，开始同步检查\n\n\U0001F4CA 四文件一致性快照：\n  论点                \
+    \      | ppt-hours | mindmap | details | slide-content\n  -------------------------|-----------|---------|---------|---------------\n\
+    \  第1章：监控体系建设背景    | ✅ 匹配   | ✅ 有   | ✅ 有   | ✅ 有\n    §1.1 告警现状与痛点      | — \
+    \        | ✅ 有   | ✅ 有   | ✅ 有\n    §1.2 建设目标设定        | —         | ✅ 有   | ✅\
+    \ 有   | ✅ 有\n  第2章：三步法实施路径      | ✅ 匹配   | ✅ 有   | ✅ 有   | ✅ 有\n    §2.1 告警分级策略设计\
+    \    | —         | ✅ 有   | ✅ 有   | ✅ 有\n    [...]\n  总计：0 处不一致，全部同步 ✅\n\n## 四文件同步结果\
+    \ — qcon-demo\n\n| # | 维度 | 严重程度 | 位置 | 问题摘要 |\n|---|------|---------|------|---------|\n\
+    | sync-004 | 全局快照 | \U0001F7E2 minor | 全局 | 四文件高度一致，无需额外同步操作（以上快照供归档参考）|\n\n**共\
+    \ 1 条建议：major 0 / minor 1**\n\n✅ 检查完成，JSON 已写入：~/.pptdog/.../sync-20260422T100000.json\n"
+  Judge:
+  - criterion: 即使四文件高度一致，仍生成了至少1条 suggestion（全局快照）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: JSON 中有 dimension='全局快照' 的 suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: Console 输出了格式化的四文件一致性快照表
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 快照表包含每个论点的四文件状态标注（✅/⚠️/—）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 总计行正确标注了不一致数量（0处）
+    points: 20
+    tags:
+    - axis:accuracy

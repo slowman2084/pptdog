@@ -1,0 +1,328 @@
+testcases:
+- id: case_0
+  input: '以下是一段 slide-content.md，大开门为废话模式：
+
+
+    ## 大开门 — 开场
+
+
+    **PPT 上放：**
+
+    布局：cover
+
+    DevOps 最佳实践分享
+
+
+    **演讲口头说：**
+
+    大家好，我是张三，来自平台工程团队。今天我要给大家分享的是我们团队在过去一年里实践的 DevOps 最佳实践。我会从以下几个方面介绍：第一，CI/CD 流水线建设；第二，容器化部署；第三，监控告警体系。希望对大家有所帮助，谢谢。
+
+
+    ppt-hours.md 内容：
+
+    分享类型: 分享型
+
+    目标时长: 30分钟
+
+    '
+  skill_type: analysis-review
+  notes: 验证 F1（废话开场漏报防护）——大开门是「大家好我是XXX今天分享」+目录，是最严重的废话开场模式，必须生成 dimension=大开门、severity=critical
+    的 suggestion，且 options 必须写出具体替代话术
+  expected_output: "\U0001F4CA 文件统计：\n  slide-content.md : 18 行，约 12 页 Slide，约 3 个章节\n\
+    \  分享类型         : 分享型\n  目标时长         : 30 分钟\n\n\U0001F50D 正在审查结构质量（9个维度）...\n\
+    \n[\n  {\n    \"id\": \"structure-001\",\n    \"reviewer_id\": \"structure\",\n\
+    \    \"dimension\": \"大开门\",\n    \"severity\": \"critical\",\n    \"type\": \"\
+    problem\",\n    \"context\": \"大开门——开场演讲口头说\",\n    \"source_lines\": { \"start\"\
+    : 8, \"end\": 12 },\n    \"original\": \"大家好，我是张三，来自平台工程团队。今天我要给大家分享的是...\",\n\
+    \    \"problem\": \"开场前 30 秒，你在自我介绍然后列目录——这是最标准的废话开场。听众不知道这场分享和自己有什么关系，注意力还没被抓住就开始走神了。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"用数字反常识开场\",\n        \"content\": \"我们去年发布了 847 次——平均每天 2.3 次。但在两年前，我们每次发布都要等一个完整的夜间窗口，全程人工操作，一旦出问题整个团队整夜不能睡。今天我来说说，我们是怎么从「发布是噩梦」变成「每天两次发布」的。\"\
+    ,\n        \"recommended\": true,\n        \"reason\": \"数字对比制造认知冲突，听众立刻感受到变化的幅度，自然想听你是怎么做到的\"\
+    \n      },\n      {\n        \"label\": \"B\",\n        \"description\": \"用痛苦现场开场\"\
+    ,\n        \"content\": \"2023 年 11 月的一个周五下午，我们做了一次「常规发布」，结果触发了一个隐藏 Bug，线上故障持续了\
+    \ 4 个小时。那次故障之后，我下定决心要彻底改掉发布方式。今天分享的就是这次改造的过程。\",\n        \"recommended\": false,\n\
+    \        \"reason\": \"故事开场有画面感，但需要有真实细节才有效\"\n      },\n      {\n        \"label\"\
+    : \"C\",\n        \"description\": \"保持原样\",\n        \"content\": \"（不修改）\",\n\
+    \        \"recommended\": false,\n        \"reason\": \"\"\n      }\n    ]\n \
+    \ }\n]\n\n## 结构审查结果 — demo-slug\n\n| # | 维度 | 严重程度 | 位置 | 问题摘要 |\n|---|------|---------|------|---------|\n\
+    | structure-001 | 大开门 | \U0001F534 critical | 第 1-2 页 | 废话开场（自我介绍+目录），前30秒没有钩子\
+    \ |\n\n**共 1 条建议：critical 1 / major 0 / minor 0**\n"
+  Judge:
+  - criterion: 生成了 dimension=「大开门」、severity=「critical」的 suggestion（F1 防护验证）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段描述了废话开场的真实后果（听众走神），未用「大开门力度不足」术语
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了具体的替代开场话术（含真实数字和场景），不是「建议加强开门力度」
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 正确从 ppt-hours.md 读取了「分享型」类型，未错误推断
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 的话术内容与演讲的实际主题（DevOps/CI/CD）相关
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: 'ppt-hours.md 内容中分享类型字段为空：
+
+
+    目标时长: 45分钟
+
+    一句话主题: 我们的微服务治理之路
+
+    听众画像: 技术团队负责人
+
+
+    slide-content.md 已存在（约 20 页，3个章节）。
+
+    '
+  skill_type: analysis-review
+  notes: 验证 F2（类型判断越俎代庖防护）——ppt-hours.md 中分享类型字段为空，AI 不应自行从 slide-content.md 结构推断类型，必须询问用户
+  expected_output: "\U0001F4CA 文件统计：\n  slide-content.md : 85 行，约 20 页 Slide，约 3 个章节\n\
+    \  分享类型         : ⚠️ 未知（ppt-hours.md 中未填写分享类型）\n  目标时长         : 45 分钟\n\n\U0001F50D\
+    \ 开始结构审查前，需要确认一个信息：\n\n您的 ppt-hours.md 中未填写分享类型，这会影响我对叙事弧度的审查方向：\n\n- **分享型（故事叙事）**：检查是否有「一波三折」的情绪递进结构（挑战→解决→新挑战→更大突破）\n\
+    - **汇报型（结论先行）**：检查是否遵循金字塔原理（结论先行→论据支撑→数据佐证）\n\n请告诉我：**这场演讲是分享型还是汇报型？**\n\n（等您确认后，我会继续完成维度5/6的审查，其他维度的审查可以先进行）\n"
+  Judge:
+  - criterion: 检测到 ppt-hours.md 中分享类型字段缺失，未静默推断
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 明确询问用户「分享型还是汇报型」，并解释两者的审查方向差异
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未直接执行维度5（一波三折）或维度6（金字塔原理）中的任意一个
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 告知用户其他维度可以先审查，不是完全停止
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有根据 slide-content.md 的结构特征（如「看起来有故事弧」）自行判断类型
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: '以下 slide-content.md 有多个章节，其中第2章完全缺少小开门：
+
+
+    ## 第2章小开门
+
+
+    **PPT 上放：**
+
+    布局：section_divider
+
+    第二章：监控告警体系
+
+
+    **演讲口头说：**
+
+    接下来我们进入第二章，监控告警体系。
+
+
+    ## Slide 8 — 告警分级策略
+
+
+    **PPT 上放：**
+
+    布局：three_stat
+
+    P1: 5分钟 | P2: 30分钟 | P3: 2小时
+
+
+    **演讲口头说：**
+
+    我们建立了三级告警分级体系...
+
+
+    ppt-hours.md: 分享类型: 分享型, 目标时长: 30分钟
+
+    '
+  skill_type: analysis-review
+  notes: 验证章节小开门检查——第2章小开门是「接下来我们进入第二章」废话过渡，缺少基于本章素材的钩子，应生成 major suggestion，且 options
+    必须写出基于本章真实素材（告警分级/P1/P2/P3）的具体小开门话术
+  expected_output: "[\n  {\n    \"id\": \"structure-001\",\n    \"reviewer_id\": \"\
+    structure\",\n    \"dimension\": \"章节小开门\",\n    \"severity\": \"major\",\n  \
+    \  \"type\": \"problem\",\n    \"context\": \"第2章「监控告警体系」——章节小开门演讲口头说\",\n   \
+    \ \"source_lines\": { \"start\": 12, \"end\": 14 },\n    \"original\": \"接下来我们进入第二章，监控告警体系。\"\
+    ,\n    \"problem\": \"这个小开门是废话——「接下来进入第二章」没有让听众产生任何期待，相当于在章节之间插了一个空白。听众刚从上一章出来，你需要一句话重新抓住他们，让他们想听这章。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"用本章核心数字制造悬念\",\n        \"content\": \"「你们猜，我们的告警系统每天触发多少次告警？——[具体数字]次。但其中真正需要人工响应的只有\
+    \ [X]%。剩下的 [Y]% 全都是噪音。告警太多了，关键告警反而被淹没了。这一章我来说我们怎么解决这个问题的。」\",\n        \"recommended\"\
+    : true,\n        \"reason\": \"用本章的核心矛盾（告警噪音）制造悬念，听众立刻想知道解决方案\"\n      },\n  \
+    \    {\n        \"label\": \"B\",\n        \"description\": \"用场景描述制造共鸣\",\n \
+    \       \"content\": \"「凌晨两点，告警响了——这是今天第 47 个告警。你知道值班的人是怎么反应的吗？他已经麻木了。正因为告警太多，真正的\
+    \ P1 事故反而没有被第一时间响应。这一章来说我们怎么解决这个告警失效的问题。」\",\n        \"recommended\": false,\n\
+    \        \"reason\": \"场景有代入感，但数字需要根据真实情况填写\"\n      },\n      {\n        \"label\"\
+    : \"C\",\n        \"description\": \"保持原样\",\n        \"content\": \"（不修改）\",\n\
+    \        \"recommended\": false,\n        \"reason\": \"\"\n      }\n    ]\n \
+    \ }\n]\n"
+  Judge:
+  - criterion: 章节小开门检查覆盖了第2章（不只检查第1章），触发了 major suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: dimension 字段为「章节小开门」，severity 为 major
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段口语化解释了废话过渡的问题（听众没有产生期待）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了基于本章真实主题（告警分级/噪音）的具体小开门话术
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options 话术中的占位符（[具体数字][X]%）说明需要讲者填入真实数据
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: '以下 slide-content.md 包含的论点组非常接近「金字塔原理三层结构」，但缺失第三层方法论沉淀：
+
+
+    # 第2章：精准告警体系
+
+
+    论点 2.1：现象——每天产生 850 条告警，真正需要人工处理的只有 3 条
+
+    论点 2.2：根因——P1 和 P3 用同一套响应流程，重要信号被噪音淹没
+
+    论点 2.3：解法——建立 P1/P2/P3 三级分级体系，各级有独立响应 SLA
+
+
+    ppt-hours.md: 分享类型: 分享型, 目标时长: 30分钟
+
+    mindmap.md 中三个论点并列（### 2.1、### 2.2、### 2.3）
+
+    '
+  skill_type: analysis-review
+  notes: 验证思维模型识别——三个并列论点（现象/根因/解法）高度匹配金字塔原理三层结构但缺失「方法论沉淀层」，匹配度应 ≥80，应生成 type=opportunity
+    的 suggestion，且 match_score 字段必须 ≥80
+  expected_output: "[\n  {\n    \"id\": \"structure-001\",\n    \"reviewer_id\": \"\
+    structure\",\n    \"dimension\": \"思维模型识别\",\n    \"severity\": \"major\",\n \
+    \   \"type\": \"opportunity\",\n    \"match_score\": 88,\n    \"model_name\":\
+    \ \"金字塔原理三层结构（现象-根因-解法）\",\n    \"model_domain\": \"商业沟通 / 麦肯锡方法论\",\n    \"context\"\
+    : \"第2章「精准告警体系」——并排三个论点（2.1现象/2.2根因/2.3解法）\",\n    \"source_lines\": { \"start\"\
+    : 25, \"end\": 60 },\n    \"original\": \"论点 2.1：现象...\\n论点 2.2：根因...\\n论点 2.3：解法...\"\
+    ,\n    \"problem\": \"你已经有了现象层和根因层，还有解法层——这三层加在一起非常完整。但还差最后一层：可复用的方法论沉淀。加上这层，听众能把你的经验带走复用，而不是听完觉得「这是你们团队的特殊情况」。\"\
+    ,\n    \"options\": [\n      {\n        \"label\": \"A\",\n        \"description\"\
+    : \"补充第四层：方法论沉淀（可复用原则）\",\n        \"content\": \"在论点 2.3 之后新增论点 2.4：「告警治理的底层原则——噪音问题本质上是分级标准问题，不是告警数量问题。只要分级标准清晰（P1\
+    \ 影响用户 > X 个且响应 SLA < 5 分钟），任何团队都可以用这套方法论来治理自己的告警噪音。」\",\n        \"recommended\"\
+    : true,\n        \"reason\": \"补完四层后演讲层次感最强，听众有可直接带走的判断标准\"\n      },\n      {\n\
+    \        \"label\": \"B\",\n        \"description\": \"将三点改写为更明显的三层递进标题\",\n \
+    \       \"content\": \"改标题：「2.1 现象——每天 850 条告警，真正重要的只有 3 条」→「2.2 根因——P1 和 P3 被同等对待，重要信号被噪音淹没」→「2.3\
+    \ 解法+原则——P1/P2/P3 分级体系（+任何团队可复用的分级判断标准）」\",\n        \"recommended\": false,\n\
+    \        \"reason\": \"改写标题不增加页数，但把方法论原则整合进解法层\"\n      },\n      {\n        \"\
+    label\": \"C\",\n        \"description\": \"保持现状\",\n        \"content\": \"三个论点已经能自圆其说，不强行加第四层\"\
+    ,\n        \"recommended\": false,\n        \"reason\": \"\"\n      }\n    ]\n\
+    \  }\n]\n"
+  Judge:
+  - criterion: 思维模型识别触发：三个并列论点与金字塔原理高度匹配，生成 type=opportunity suggestion
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: match_score 字段存在且值 ≥ 80（严格门槛 D1A）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: model_name 和 model_domain 字段存在，说明识别到的模型来源
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段说明了缺失的维度（方法论沉淀层）以及补全的价值
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 写出了具体的新论点内容（不是「建议补充方法论」），来自演讲实际内容
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_4
+  input: '以下 slide-content.md 中 Slide 总数与目标时长不匹配（偏多）：
+
+
+    ppt-hours.md: 目标时长: 20分钟
+
+    slide-content.md: 共 32 页 Slide
+
+
+    其中 Slide 15（「团队介绍」）和 Slide 16（「项目背景」）内容较简单：
+
+
+    ## Slide 15 — 团队介绍
+
+
+    **PPT 上放：**
+
+    布局：bullet_list
+
+    - 平台工程团队：8人
+
+    - 成立时间：2022年
+
+    - 负责领域：DevOps/SRE
+
+
+    ## Slide 16 — 项目背景
+
+
+    **PPT 上放：**
+
+    布局：bullet_list
+
+    - 微服务数量：127个
+
+    - 日均部署次数：45次
+
+    '
+  skill_type: analysis-review
+  notes: 验证时长匹配维度（D3B）——目标20分钟对应合理 Slide 数为12-24页，实际32页超出上限 33%（偏差 >20% 触发 major），且
+    options 必须具体指出哪几页可合并（不能只说「建议减少 Slide 数量」）
+  expected_output: "[\n  {\n    \"id\": \"structure-001\",\n    \"reviewer_id\": \"\
+    structure\",\n    \"dimension\": \"时长匹配\",\n    \"severity\": \"major\",\n   \
+    \ \"type\": \"problem\",\n    \"context\": \"全局——Slide 数量与目标时长不匹配\",\n    \"source_lines\"\
+    : { \"start\": 1, \"end\": 5 },\n    \"original\": \"目标时长：20分钟 | 实际 Slide 数：32\
+    \ 页\",\n    \"problem\": \"你有 32 页 Slide，但只有 20 分钟——按正常讲解速度（每页约 1-1.5 分钟），你可能需要\
+    \ 32-48 分钟。要么大幅压缩每页时间（听众跟不上），要么就得超时。\",\n    \"options\": [\n      {\n       \
+    \ \"label\": \"A\",\n        \"description\": \"合并内容简单的背景页（建议减少 6-8 页）\",\n  \
+    \      \"content\": \"建议优先合并：\\n1. Slide 15「团队介绍」和 Slide 16「项目背景」内容简单，可合并为一页「背景（1/1）：团队8人\
+    \ | 微服务127个 | 日均部署45次」\\n2. 检查各章节的过渡页是否可以删除（如仅有标题的 section_divider 且章节够短时）\\n预计合并后约\
+    \ 24-26 页，对应约 24-39 分钟。\",\n        \"recommended\": true,\n        \"reason\"\
+    : \"背景信息页通常可压缩，不影响核心论点\"\n      },\n      {\n        \"label\": \"B\",\n     \
+    \   \"description\": \"压缩每页演讲时间\",\n        \"content\": \"每页控制在平均 37 秒（20分钟/32页），适合信息密度较低、听众熟悉主题的场景。\"\
+    ,\n        \"recommended\": false,\n        \"reason\": \"时间太短可能导致内容讲不清楚\"\n \
+    \     },\n      {\n        \"label\": \"C\",\n        \"description\": \"保持现状（接受可能超时）\"\
+    ,\n        \"content\": \"（不修改，演讲时根据实际时间调整）\",\n        \"recommended\": false,\n\
+    \        \"reason\": \"\"\n      }\n    ]\n  }\n]\n"
+  Judge:
+  - criterion: 时长匹配计算正确：20分钟×1.2=24页，实际32页超出，生成 major suggestion（偏差约33%，在20-50%区间）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: dimension 为「时长匹配」，severity 为 major（偏差20-50%）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: options A 具体指出了哪几页可合并（Slide 15 团队介绍 + Slide 16 项目背景），而非仅「建议减少 Slide
+      数量」（F5 防护验证）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: problem 字段口语化（讲完可能需要32-48分钟），未用「时长偏差超阈值」等技术术语
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 使用了正确的计算公式（目标时长×0.6 ~ ×1.2）
+    points: 20
+    tags:
+    - axis:accuracy

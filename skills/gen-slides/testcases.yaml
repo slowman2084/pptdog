@@ -1,0 +1,199 @@
+testcases:
+- id: case_0
+  input: /gen-slides
+  skill_type: conversational-guide
+  notes: 验证 Backend 选择主权（I2/F1）——用户不带 --backend 参数运行时，AI 必须先执行环境扫描，然后展示完整 Backend
+    列表等待用户选择，严禁静默使用任何默认工具开始生成。
+  expected_output: "\U0001F4C1 项目：qcon-2026-mgmt\n\U0001F4C1 项目目录：/Users/user/.pptdog/projects/qcon-2026-mgmt\n\
+    \U0001F4C4 slide-content.md：✅ 存在\n\U0001F4C4 review.md：⚠️ 不存在\n\U0001F4C1 slides/：目录不存在\n\
+    \n\U0001F50D 正在扫描可用的 PPT 生成工具...\n\n**模板检测：**\n❌ ~/.pptdog/templates/ — 无 .pptx\
+    \ 模板\n❌ 项目目录 template.pptx — 不存在\n❌ ~/Desktop/*.pptx — 未检测到\n\n**工具扫描：**\n❌ html-ppt-designer\
+    \ — 未安装\n❌ pptx skill — 未安装\n❌ ppt-generator-pro — 未安装\n✅ python-pptx — 已安装（v0.9.1）\n\
+    ✅ Marp — 已安装（1.6.0）\n❌ LibreOffice — 未安装\n\n---\n\n\U0001F50D 可用的 PPT 生成工具：\n\n\
+    \  A. html-ppt-designer    ❌ 未安装   ⭐ 推荐新选项\n  B. ppt-generator-pro    ❌ 未安装\n\
+    \  C. NanoBanana           ❌ 未安装\n  D. pptx skill           ❌ 未安装\n  E. python-pptx\
+    \          ✅ 已安装\n  F. Marp                 ✅ 已安装   （技术分享首选，主题丰富）\n  G. 仅导出 Markdown\
+    \       ✅ 始终可用\n\n\U0001F4A1 没有公司模板？可以放一个 .pptx 模板到 ~/.pptdog/templates/，下次会自动检测并优先推荐。\n\
+    \n请选择要使用的 Backend（输入字母）：\n"
+  Judge:
+  - criterion: 执行了 Preamble 打印项目状态（slide-content.md/review.md/slides/目录三字段）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 执行了真实的环境扫描（模板检测3类路径 + 工具扫描），用 ✅/❌ 如实标注
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 展示了完整 Backend 列表并等待用户选择
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未静默使用任何默认 Backend 开始生成
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未安装工具标注 ❌，已安装工具标注 ✅，无虚假标注
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: /gen-slides（slide-content.md 不存在）
+  skill_type: conversational-guide
+  notes: 验证 slide-content.md 缺失时的停止行为——这是 Preamble 的硬性要求，文件不存在时必须立即停止并给出正确提示，不能继续扫描或生成。
+  expected_output: '📁 项目：qcon-2026-mgmt
+
+    📁 项目目录：/Users/user/.pptdog/projects/qcon-2026-mgmt
+
+    📄 slide-content.md：⚠️ 不存在
+
+    📄 review.md：⚠️ 不存在
+
+    📁 slides/：目录不存在
+
+
+    ⛔ 找不到 ~/.pptdog/projects/qcon-2026-mgmt/slide-content.md
+
+
+    请先运行 /slide-content-and-scripts 生成内容稿，再来运行 /gen-slides。
+
+    '
+  Judge:
+  - criterion: 检测到 slide-content.md 不存在后立即停止
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 打印了 ⛔ 错误提示和正确的修复建议（运行 /slide-content-and-scripts）
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 未继续执行后续步骤（未扫描工具、未展示 Backend 列表）
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 状态打印中 slide-content.md 标注为 ⚠️ 不存在
+    points: 25
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: /gen-slides（review.md 均分 5.2）
+  skill_type: conversational-guide
+  notes: 验证评审门槛非阻塞提醒（D2A/F4）——review.md 存在但均分 <7 时，必须展示 Qg-0 警告含具体均分数字，A/B/C 三选项，等待用户选择，但不阻塞用户选
+    B 或 C 继续。
+  expected_output: '📁 项目：qcon-2026-mgmt
+
+    📄 slide-content.md：✅ 存在
+
+    📄 review.md：✅ 存在（均分 5.2）
+
+    📁 slides/：目录不存在
+
+
+    ⚠️ 内容尚未通过评审（均分 5.2 / 10）
+
+
+    均分低于 6 分时，强烈建议先修改内容再生成 PPT，否则生成后需要重来。
+
+
+    **Qg-0：内容尚未通过评审，是否继续生成？**
+
+
+    A. 先去修改内容，改完再回来生成 ← **强烈建议**（均分 <6）
+
+    B. 我知道问题了，先生成看效果（风险自担）
+
+    C. 直接生成，跳过所有提醒
+
+
+    请选择（输入 A/B/C）：
+
+    '
+  Judge:
+  - criterion: 检测到 review.md 均分 5.2 后展示了 Qg-0 警告
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 警告中包含具体的均分数字（5.2）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 提供了 A/B/C 三个选项
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 均分 <6 时在 A 选项旁标注「强烈建议」
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 未直接继续生成，等待用户选择
+    points: 16
+    tags:
+    - axis:accuracy
+  - criterion: 选项 B/C 存在（用户可以跳过继续），体现非阻塞特性
+    points: 16
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: /gen-slides（有公司模板，用户选择 Marp Backend）
+  skill_type: conversational-guide
+  notes: 验证模板检测影响 Backend 列表展示（I1/F5）——检测到 .pptx 模板时，必须在列表顶部标注模板路径，并在 Marp/Markdown
+    选项旁标注「⚠️ 不支持 .pptx 模板」。
+  expected_output: "\U0001F3A8 检测到 PPT 模板：~/.pptdog/templates/company-template.pptx\n\
+    \n\U0001F50D 可用的 PPT 生成工具：\n\n  A. html-ppt-designer    ❌ 未安装   ⭐ 推荐新选项\n  B.\
+    \ ppt-generator-pro    ❌ 未安装\n  C. NanoBanana           ❌ 未安装\n  D. pptx skill\
+    \           ❌ 未安装\n  E. python-pptx          ✅ 已安装   （支持 .pptx 模板）\n  F. Marp\
+    \                 ✅ 已安装   ⚠️ 不支持 .pptx 模板\n  G. 仅导出 Markdown       ✅ 始终可用  ⚠️\
+    \ 不支持 .pptx 模板\n\n[用户选择 F（Marp）后继续...]\n\n✅ 使用 Marp 生成（已了解：不支持 .pptx 模板）\n\n[继续内容适配...]\n"
+  Judge:
+  - criterion: 检测到模板时在列表顶部显示 🎨 检测到 PPT 模板 + 模板路径
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: F（Marp）和 G（Markdown）旁标注 ⚠️ 不支持 .pptx 模板
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 用户选择 F 后继续执行（模板警告是信息提示而非阻塞）
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: Backend 列表中未将模板不兼容的工具隐藏或排除，用户仍可选择
+    points: 25
+    tags:
+    - axis:accuracy
+- id: case_4
+  input: /gen-slides（用户选择 python-pptx，已生成完毕）
+  skill_type: conversational-guide
+  notes: 验证完整交付流程（D3B/F6）——生成成功后必须包含7个交付标志：文件路径/幻灯片数/时长/打开命令/Qg-3备注版询问/timeline写入/final状态一览+流程完成提示。
+  expected_output: "\U0001F389 演示文稿已生成！\n\n\U0001F4C4 文件路径：~/.pptdog/projects/qcon-2026-mgmt/slides/deck.pptx\n\
+    \U0001F6E0  生成方式：python-pptx\n\U0001F4CA 共 24 张幻灯片\n⏱️  预计演讲时长：约 43 分钟\n\n在 Finder\
+    \ 中查看：\n  open ~/.pptdog/projects/qcon-2026-mgmt/slides/\n\n---\n\n**Qg-3：是否需要演讲者备注版？**\n\
+    \nA. 是，生成备注版（演讲稿填入每页备注区，演讲时对照）\nB. 否，跳过 ← 推荐（保持 PPT 简洁）\nC. 只导出备注文稿（纯文字，不嵌入 PPTX）\n\
+    \n请选择（输入 A/B/C）：\n\n[用户选择 B 后...]\n\n✅ timeline 已记录：gen-slides-completed | backend:\
+    \ python-pptx | 24 pages | no notes\n\n\U0001F4CB 项目完成状态：\n  ✅ ppt-hours.md\n\
+    \  ✅ mindmap.md\n  ✅ details.md\n  ✅ slide-content.md\n  ⚠️ review.md（未评审）\n \
+    \ ✅ slides/deck.pptx ← 刚刚生成\n\n\U0001F3C1 pptdog 流程完成！祝演讲顺利 \U0001F3A4\n"
+  Judge:
+  - criterion: 交付打印包含文件路径（绝对路径）/生成方式/幻灯片数/预计时长四个字段
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 包含 Finder 打开命令
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 展示了 Qg-3 备注版询问（A/B/C 三选）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 写入了 timeline.jsonl 记录（包含 backend/pages/with_notes 字段）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 打印了 final 项目状态一览（列出所有文件状态）
+    points: 16
+    tags:
+    - axis:accuracy
+  - criterion: 末尾包含 🏁 pptdog 流程完成！祝演讲顺利 🎤
+    points: 16
+    tags:
+    - axis:accuracy

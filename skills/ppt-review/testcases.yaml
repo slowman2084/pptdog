@@ -1,0 +1,220 @@
+testcases:
+- id: case_0
+  input: /ppt-review（四文件齐全，slide-content.md 存在，全量模式）
+  skill_type: conversational-guide
+  notes: 验证全量审查启动流程（D1/D2）——四文件齐全时，Preamble 正确检测阶段，打印完整状态摘要，然后调用七个审查器并行审查，打印审查完成摘要（含每个
+    JSON 文件的建议数和 severity 分布）。
+  expected_output: "~/.pptdog/bin/pptdog-update-check...\n~/.pptdog/bin/pptdog-learnings-search\
+    \ --limit 3...\n\n\U0001F4C1 项目：qcon-2026-mgmt\n\U0001F4C1 项目目录：~/.pptdog/projects/qcon-2026-mgmt\n\
+    \n当前可审查的文件：\n  ppt-hours.md      ✅\n  details.md        ✅\n  mindmap.md      \
+    \  ✅\n  slide-content.md  ✅\n\n\U0001F50D 审查范围：全量审查（七个审查器）\n\U0001F501 审查模式：首次审查\n\
+    \n正在启动审查器，并行审查...\n\n\U0001F50D 内容审查器     (review-content)\n\U0001F50D 结构审查器 \
+    \    (review-structure)\n\U0001F50D 演讲审查器     (review-delivery)\n\U0001F50D 逻辑完整性\
+    \     (review-logic)\n\U0001F50D 演讲技巧机会   (review-craft)\n\U0001F50D 四文件同步   \
+    \  (review-sync)\n\U0001F50D 布局质量       (review-layout)\n\n✅ 审查完成：\n  content-20260417T143022.json\
+    \   — 6 条建议（critical: 1 / major: 3 / minor: 2）\n  structure-20260417T143022.json\
+    \ — 4 条建议（critical: 0 / major: 2 / minor: 2）\n  delivery-20260417T143022.json\
+    \  — 5 条建议（critical: 1 / major: 2 / minor: 2）\n  logic-20260417T143022.json  \
+    \   — 3 条建议（critical: 0 / major: 2 / minor: 1）\n  craft-20260417T143022.json \
+    \    — 4 条建议（major: 2 / minor: 2）\n  sync-20260417T143022.json      — 2 条建议（major:\
+    \ 1 / minor: 1）\n  layout-20260417T143022.json    — 5 条建议（critical: 0 / major:\
+    \ 3 / minor: 2）\n  共 29 条建议\n\n✅ Dashboard 已生成：/tmp/pptdog-review-qcon-2026-mgmt.html\n\
+    \n操作步骤：\n  1. 浏览器已打开，所有建议已自动加载（无需手动选文件）\n  2. 对每条建议选择 A/B/C 或自定义\n  3. 点击「导出决策文件」下载\
+    \ review-decisions-<ts>.json\n  4. 将文件保存到：~/.pptdog/projects/qcon-2026-mgmt/\n\
+    \  5. 回到 AI，输入「/ppt-review apply」执行修改\n"
+  Judge:
+  - criterion: Preamble 打印了四文件状态（✅/❌ 各自状态）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 审查范围标注为「全量审查（七个审查器）」
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 七个审查器全部调用（content/structure/delivery/logic/craft/sync/layout）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 审查完成后打印每个 JSON 文件名 + 建议条数 + severity 分布
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: Python 注入脚本执行成功（Dashboard 生成）
+    points: 16
+    tags:
+    - axis:accuracy
+  - criterion: 打印了操作步骤（含导出 decisions 路径说明）
+    points: 16
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: /ppt-review（仅有 ppt-hours.md 和 mindmap.md，无 slide-content.md）
+  skill_type: conversational-guide
+  notes: 验证早期阶段降级引导（D1B — 先说明再询问）——slide-content.md 不存在时，AI 不应静默跳过不适用的审查器，而应先说明当前能审查什么/不能审查什么，并询问用户是否继续早期审查。
+  expected_output: "当前可审查的文件：\n  ppt-hours.md      ✅\n  details.md        ❌\n  mindmap.md\
+    \        ✅\n  slide-content.md  ❌\n\n\U0001F50D 审查范围：早期审查（结构+逻辑+部分同步）\n\U0001F501\
+    \ 审查模式：首次审查\n\n**当前阶段可以审查的内容：**\n- ✅ review-structure：审查 mindmap 的结构逻辑、章节开关门、叙事弧度、思维模型识别\n\
+    - ✅ review-logic：审查推理链条完整性、MECE、隐含假设\n- ✅ review-sync（部分）：检查 ppt-hours 与 mindmap\
+    \ 的一致性\n\n**当前阶段暂不可用的审查器（需要 slide-content.md）：**\n- ❌ review-content（需要 slide-content.md）\n\
+    - ❌ review-delivery（需要 slide-content.md）\n- ❌ review-craft（需要 slide-content.md）\n\
+    - ❌ review-layout（需要 slide-content.md）\n\n\U0001F4A1 **建议**：mindmap 阶段的早期结构审查价值很高——越早发现结构问题，修改成本越低。等\
+    \ slide-content.md 完成后，可以触发全量七审查器。\n\n**要现在做早期结构审查，还是先继续补充内容（运行 /slide-content-and-scripts）？**\n\
+    \nA. 现在做早期审查（review-structure + review-logic + review-sync 部分）\nB. 先去完成 slide-content.md，之后做全量审查\n"
+  Judge:
+  - criterion: 识别到 slide-content.md 不存在，审查范围降级为早期审查
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 明确说明了当前可用的审查器（3个）和不可用的审查器（4个）及原因
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 说明了等 slide-content.md 完成后可触发全量审查
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 询问用户是否继续早期审查（A/B 两选）而非静默跳过
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未直接开始调用审查器，等待用户选择
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: /ppt-review apply（用户已导出 decisions.json，选择了 12 条建议）
+  skill_type: conversational-guide
+  notes: 验证 apply 修改流程 + 自动上游同步（I3/D2A）——apply 完成后自动执行上游同步（三层分类：演讲稿/论点/结构），打印同步预览后直接同步，不询问
+    Qr-sync，然后询问是否重新审查（Qr-apply）。
+  expected_output: "\U0001F4CB 读取决策文件：~/.pptdog/projects/qcon-2026-mgmt/review-decisions-20260417T150000.json\n\
+    \n正在执行修改...\n\n✅ 修改完成：应用 10 条建议（跳过 2 条）\n  - slide-content.md 已更新\n\n---\n\n\U0001F4CB\
+    \ 上游同步预览：\n\n  details.md 需要更新（2处论点层改动）：\n    §论点 2.1「告警分级策略」\n    → 追加 Why 层说明：「告警分级不是数量问题是粒度问题——P1和P3用同一套流程导致噪音」\n\
+    \n    §论点 3.1「推广落地经验」\n    → 追加数字证据：「接入覆盖率从 12% → 99%，历时 3 个月」\n\n  mindmap.md\
+    \ 需要更新（1处结构层改动）：\n    §第2章「告警建设」\n    → 调整章节备注：「章节名优化为论点型标题已在 slide-content 执行」\n\
+    \n  共 3 处上游同步\n\n✅ 上游同步完成：details.md 2 处 / mindmap.md 1 处\n\n---\n\n**Qr-apply：修改已完成，是否立即重新审查对比前后变化？**\n\
+    \nA. 是，立即重新运行审查器对比前后变化 ← 推荐\nB. 否，我先看看修改结果，稍后再审查\n"
+  Judge:
+  - criterion: 打印了修改摘要（应用N条/跳过M条）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 对所有已执行 decisions 进行三层分类（演讲稿/论点/结构）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 打印了上游同步预览（目标文件/目标章节/追加内容摘要）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 直接执行了上游同步（D2A，无需询问 Qr-sync）
+    points: 17
+    tags:
+    - axis:accuracy
+  - criterion: 同步完成后打印 details.md N处 / mindmap.md M处 统计
+    points: 16
+    tags:
+    - axis:accuracy
+  - criterion: 询问了 Qr-apply（A/B 两选），等待用户回答
+    points: 16
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: /ppt-review apply，然后用户选择 A（立即重新审查）
+  skill_type: conversational-guide
+  notes: 验证重新审查后的维度汇总对比报告（D3A）——重新审查完成后，按维度汇总展示 critical 数变化（表格格式），有下降标 ✅ -N，持平标 —，上升标
+    ⚠️ +N，全部清零时显示庆祝标记。
+  expected_output: '重新运行审查器...
+
+    [审查完成]
+
+
+    ## 审查对比（第1次 vs 第2次）
+
+
+    | 维度             | 上次 critical | 本次 | 变化   |
+
+    |-----------------|--------------|------|--------|
+
+    | 内容（content）  | 1            | 0    | ✅ -1  |
+
+    | 结构（structure）| 0            | 0    | — 持平 |
+
+    | 演讲（delivery） | 1            | 1    | — 持平 |
+
+    | 逻辑（logic）    | 0            | 0    | — 持平 |
+
+    | 技巧（craft）    | —            | —    | — 持平 |
+
+    | 同步（sync）     | —            | —    | — 持平 |
+
+    | 布局（layout）   | 0            | 0    | — 持平 |
+
+    | **总计**         | 2            | 1    | ✅ -1  |
+
+
+    💡 仍有 1 条 critical 建议（delivery 维度），建议再过一遍 Dashboard 决策后进入 /gen-slides
+
+    '
+  Judge:
+  - criterion: 重新审查后产出了维度汇总对比表格（7个维度 + 总计行）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 表格包含「上次 critical」和「本次」两列
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 变化列使用 ✅ -N / — 持平 / ⚠️ +N 格式标注
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 有剩余 critical 时给出具体数量和继续建议
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未输出每条建议的具体内容（只是维度汇总，不是完整列表）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_4
+  input: /ppt-review apply，所有 critical 和 major 清零后再次审查
+  skill_type: conversational-guide
+  notes: 验证激励感知（I5）——所有 critical 和 major 均清零时，应显示庆祝标记而非普通提示，体现 pptdog 流程的正向反馈机制。
+  expected_output: '## 审查对比（第3次 vs 第4次）
+
+
+    | 维度             | 上次 critical | 本次 | 变化   |
+
+    |-----------------|--------------|------|--------|
+
+    | 内容（content）  | 1            | 0    | ✅ -1  |
+
+    | 结构（structure）| 0            | 0    | — 持平 |
+
+    | 演讲（delivery） | 0            | 0    | — 持平 |
+
+    | 逻辑（logic）    | 0            | 0    | — 持平 |
+
+    | **总计**         | 1            | 0    | ✅ -1  |
+
+
+    🎉 所有重要问题已修复，可以进入 /gen-slides 生成 PPT 了！
+
+    '
+  Judge:
+  - criterion: 所有 critical 和 major 均为 0 时，显示 🎉 庆祝标记
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 庆祝信息明确提示可以进入下一步（/gen-slides）
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 对比表格仍然完整输出（不因为清零而省略）
+    points: 25
+    tags:
+    - axis:accuracy
+  - criterion: 无多余的警告或建议继续审查的提示
+    points: 25
+    tags:
+    - axis:accuracy

@@ -1,0 +1,514 @@
+testcases:
+- id: case_0
+  input: /slide-content-and-scripts qcon-2026-mgmt
+  skill_type: conversational-guide
+  notes: 验证正常完整执行流程——AI 应执行 Preamble、Step 0 内容缺口校验、Step 1 时长估算，生成 mindmap↔details
+    对比表后一气呵成生成初稿。验证高效执行者（D1B）模式：不中途打断用户等待回答。
+  expected_output: "\U0001F4CB 项目：qcon-2026-mgmt\n\U0001F4C1 项目目录：~/.pptdog/projects/qcon-2026-mgmt\n\
+    \n✅ 读取文件完成：\n  - mindmap.md：3章，共12个论点\n  - details.md：11个论点有内容，1个论点内容为空\n  - ppt-hours.md：分享型，目标45分钟\n\
+    \n## Step 0：内容缺口校验\n\n| 论点 | mindmap | details | 状态 |\n|------|---------|---------|------|\n\
+    | §1.1 监控告警现状 | ✅ | ✅ 完整 | ✅ |\n| §1.2 故障定位痛点 | ✅ | ✅ 完整 | ✅ |\n| §2.1 分级告警体系\
+    \ | ✅ | ✅ 完整 | ✅ |\n| §2.2 根因分析工具 | ✅ | ⚠️ 缺数字证据 | ⚠️ |\n| §3.1 推广落地经验 | ✅ | ❌\
+    \ 无内容 | ❌ |\n\n处理方式：§2.2 自动补全（已标注 [AI推断，请确认]），§3.1 基于章节主题推断（已标注 [AI推断，请确认]）。所有推断点将在\
+    \ Step 5 自检汇总。\n\n## Step 1：时长估算\n\n| 论点 | 内容量等级 | 伪动画 | 可压缩 | 预估分钟 |\n|------|---------|-------|------|--------|\n\
+    | 大开门 | 完整案例型 | — | — | 2.5分钟 |\n| §1.1 监控告警现状 | 数据型 | — | ✅ | 1分钟 |\n| §1.2 故障定位痛点\
+    \ | 深度案例 | ✅ 数据冲击 | — | 4分钟 |\n...\n预计总时长：约 43 分钟 ✅ 在预算内（目标 45 分钟）\n\n[继续生成各章节\
+    \ Slides...]\n"
+  Judge:
+  - criterion: 输出了 Preamble 项目状态（项目名/文件状态）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: Step 0 生成了 mindmap↔details 对比表，包含 ✅/⚠️/❌ 三种状态标注
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 对缺失/部分匹配内容自动修补并标注 [AI推断，请确认]，而非中断流程等待用户回答
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: Step 1 打印了完整时长汇总表（每行含论点/内容量等级/伪动画标记/预估分钟）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未在 Step 0 后停下来等待用户确认才继续（高效执行者模式）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: '已有如下 mindmap.md（3章8个论点）和 details.md，请生成 slide-content.md。
+
+    mindmap 结构：
+
+    ## 第一章：问题背景
+
+    ### §1.1 业务规模与挑战
+
+    ### §1.2 技术债务现状
+
+    ## 第二章：解决方案
+
+    ### §2.1 架构重构策略
+
+    ### §2.2 渐进式迁移方案
+
+    ## 第三章：成果与经验
+
+    ### §3.1 量化成果
+
+    ### §3.2 踩坑总结
+
+    '
+  skill_type: conversational-guide
+  notes: 验证骨架忠实度（D1/F1）——AI 必须严格按 mindmap 的章节顺序生成，不得重排、合并、新增章节，即使 AI 认为调整更合理。这是 P0
+    硬约束。
+  expected_output: '## Slide 1 — 大开门
+
+
+    **PPT 上放：**
+
+    布局：big_number（单数字震撼）
+
+    [需补充：开门核心数字或场景，建议从 details.md §1.1 中提取]
+
+
+    **演讲口头说：**
+
+    - 承接：[开场切入]
+
+    - 核心内容：[AI推断，请确认：基于 details 中的业务背景，推断开门适合用规模数字制造冲击感]
+
+    - 铺垫：让我先带大家回到那个时刻——
+
+
+    **配合说明：**
+
+    [PPT负责：数字视觉冲击]
+
+    [演讲负责：故事背景和情绪铺垫]
+
+
+    💡 大开门备选方案 B/C 见附录 A.1
+
+
+    ---
+
+
+    ## 小开门 — 第一章：问题背景
+
+
+    **PPT 上放：**
+
+    布局：section_divider（章节分隔）
+
+    第一章：问题背景
+
+
+    **演讲口头说：**
+
+    - [需补充：本章的问题引入钩子，建议用 §1.1 中的具体数字或场景]
+
+
+    ---
+
+
+    ## Slide 2 — §1.1 业务规模与挑战
+
+
+    [按 mindmap 顺序继续...]
+
+    '
+  Judge:
+  - criterion: 生成的 Slide 章节顺序与 mindmap 完全一致（第一章→第二章→第三章，不重排）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未新增 mindmap 中不存在的章节，未合并任何两个章节
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 所有论点按 §1.1→§1.2→§2.1→§2.2→§3.1→§3.2 顺序出现
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 包含大开门、每章小开门/小关门、大关门的结构
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 没有出现'我觉得第三章放在第一章更合理'或类似调整骨架的行为
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: '请生成 slide-content.md，以下是一个 Slide 的内容规划，请评估空姐效应是否正确执行：
+
+
+    ## Slide 5 — 故障定位从43分钟到3分钟
+
+
+    **PPT 上放：**
+
+    布局：两列对比
+
+    通过引入统一的监控平台和告警分级体系，我们将故障定位时间从原来的平均43分钟大幅压缩到了3分钟以内，效率提升了约93%，整体稳定性显著改善，用户投诉率同步下降了67%。
+
+
+    **演讲口头说：**
+
+    通过引入统一的监控平台和告警分级体系，我们将故障定位时间从原来的平均43分钟大幅压缩到了3分钟以内，效率提升了约93%。
+
+    '
+  skill_type: conversational-guide
+  notes: 验证空姐效应检查（D2/F2）——这个 Slide 的 PPT 内容是完整段落句子，演讲口头说与 PPT 内容高度重叠（>50%）。AI 应在 Step
+    5 全局自检中识别并标注，建议修改。
+  expected_output: '## 📋 待确认事项汇总
+
+
+    ### 空姐效应扫描结果（Step 5-3）
+
+
+    ⚠️ 发现 1 处空姐效应问题：
+
+
+    **Slide 5「故障定位从43分钟到3分钟」**
+
+    - 问题：PPT 正文包含完整陈述段落（主谓宾完整，超过 50 字）
+
+    - 问题：PPT 内容与演讲口头说重叠度约 85%（超过 30% 上限）
+
+    - "配合说明"块当前表述为"PPT和演讲说同一件事"，违反双通道分工原则
+
+
+    **建议修改方案：**
+
+    PPT 上放 → 改为：`before_after 布局：左「43分钟」右「3分钟」，中间箭头标注「-93%」`
+
+    演讲口头说 → 补充 Why 层：「为什么是 3 分钟？关键是分级告警让我第一时间知道是哪一层出了问题……」
+
+
+    **配合说明（修改后）：**
+
+    [PPT负责：数字对比冲击，一秒传递改善幅度]
+
+    [演讲负责：解释为什么能做到、背后的架构决策]
+
+    '
+  Judge:
+  - criterion: 在全局自检阶段（Step 5）识别出 PPT 内容是完整陈述句（空姐效应问题）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 识别出 PPT 与演讲口头说重叠度超过 30% 阈值
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 给出具体的修改建议：PPT 改为布局名+具体内容（不只是方向说明）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 给出演讲口头说的补充方向（Why 层）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 修改建议中的 PPT 新内容格式正确（布局名+对比数据）
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: '生成 slide-content.md 时，details.md 中某个论点（§2.3 弹性扩缩容策略）完全没有素材，请展示如何正确标注。
+
+    '
+  skill_type: conversational-guide
+  notes: 验证[需补充]标注规范（D3/F3）——当 details 真的缺失素材时，AI 应使用[需补充]标注并说明缺失类型和建议来源，而不是使用[演讲者填写]、[具体内容]等占位符，更不能凭空编造。
+  expected_output: '## Slide 9 — §2.3 弹性扩缩容策略
+
+
+    **论点类型：** 方法论型
+
+
+    **PPT 上放：**
+
+    布局：vertical_steps（垂直步骤）
+
+    [需补充：弹性扩缩容的具体步骤或触发条件，建议从以下来源提取：
+
+    - 系统监控面板：CPU/内存触发阈值设定
+
+    - 运维手册：扩缩容操作 SOP
+
+    - 历史事件复盘：哪次大促触发了自动扩容]
+
+
+    **演讲口头说：**
+
+    - 承接上一页：有了告警分级，我们知道了「什么时候出问题」——但服务能不能撑住流量，就需要弹性扩缩容了。
+
+    - 核心内容：[需补充：扩缩容策略的具体触发条件和执行步骤，建议提供1-2个真实触发案例，包含触发时间/流量倍数/响应时长]
+
+    - 铺垫下一页：有了这套机制，再大的流量我们也能扛——接下来看成果数据。
+
+    预计时长：约 2 分钟 [可压缩]
+
+
+    **配合说明：**
+
+    [PPT负责：步骤流程的视觉呈现]
+
+    [演讲负责：每步背后的决策依据和踩坑经验]
+
+
+    **素材来源：** （来源：details.md §2.3 — ❌ 内容缺失，已标注待补充）
+
+    '
+  Judge:
+  - criterion: 使用 [需补充：具体缺失什么，建议提供什么类型的内容] 格式，而非 [演讲者填写] 或 [具体内容]
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: '[需补充] 标注中包含具体的缺失类型说明（如''扩缩容的具体步骤或触发条件''）'
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: '[需补充] 标注中包含建议来源（如''系统监控面板''/''运维手册''）'
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未出现 [演讲者填写]、[此处填充案例]、TODO、FIXME 等偷懒占位符
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 即使素材缺失，演讲口头说的承接句和铺垫句仍然填充了实际内容
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_4
+  input: '/slide-content-and-scripts
+
+    （仅有 mindmap.md，details.md 不存在的情况下运行）
+
+    '
+  skill_type: conversational-guide
+  notes: 验证 Step 5 全局自检的完整性（D4/F4）——不论内容质量如何，Step 5 自检必须执行，产出结构化的待确认清单（推断/需补充/修补三张表）。同时验证文件统计打印正确。
+  expected_output: '## Step 5：全局自检报告
+
+
+    ### 1. 时长最终核算
+
+    | Slide | 论点 | 预估时长 | 可压缩 |
+
+    |-------|------|--------|------|
+
+    | 1 | 大开门 | 2.5分钟 | — |
+
+    | 2 | §1.1 | 1分钟 | ✅ |
+
+    ...
+
+    **总计：约 43 分钟 ✅ 在预算内**
+
+
+    ### 2. 伪动画连续性
+
+    ✅ Slide 3-a/3-b：布局一致（before_after），切换触发词存在「那真正的原因是什么？」
+
+
+    ### 3. 空姐效应扫描
+
+    ✅ 全部页面通过检测（无完整陈述句，重叠度 <30%）
+
+
+    ### 4. 标题论点化检查
+
+    ⚠️ 需修改：Slide 6「告警建设」→ 建议改为「P1告警首达率从40%提升至98%」
+
+
+    ### 5. 主语 & 口语化
+
+    ⚠️ "我们"出现 5 处：
+
+    - Slide 4 演讲口头说第2句："我们发现" → 建议改为"我发现"
+
+    - Slide 7 演讲口头说第1句："我们团队" → 可保留（团队归属表达）
+
+
+    ---
+
+
+    ## 📋 待确认事项汇总
+
+
+    ### AI 推断内容（2 处）
+
+    | 位置 | 原始缺口 | AI 推断内容 | 置信度 |
+
+    |------|---------|-----------|--------|
+
+    | Slide 9 | details §2.3 无内容 | "弹性扩缩容分三步触发..." | 低 |
+
+
+    ### 需补充内容（3 处）
+
+    | 位置 | 缺失类型 | 建议提供 |
+
+    |------|---------|---------|
+
+    | Slide 9 PPT | 步骤数据 | 从运维手册截取 SOP |
+
+    '
+  Judge:
+  - criterion: Step 5 全局自检产出了 5 项检查（时长核算/伪动画/空姐效应/标题论点化/主语口语化）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 待确认清单包含三张表：AI推断/需补充/自动修补
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 时长核算表每行包含 Slide 编号/论点/预估时长/可压缩标记
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 标题论点化检查列出了具体需修改的页面和改写建议
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 主语检查列出了「我们」出现的具体位置和改写建议
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_5
+  input: 'mindmap 中有两个章节内容很相似，AI 是否可以将它们合并成一章，以便内容更紧凑？
+
+    章节1：§2.1 监控体系建设
+
+    章节2：§2.2 告警分级优化
+
+    '
+  skill_type: conversational-guide
+  notes: 验证骨架篡改防护（F1）——当用户或 AI 自身倾向于合并/调整 mindmap 章节时，AI 必须拒绝，解释 mindmap 是唯一骨架和 P0
+    约束，而不是直接执行合并。
+  expected_output: '⚠️ 无法合并这两个章节。
+
+
+    `mindmap.md` 是 `slide-content-and-scripts` 的唯一骨架（P0 硬约束），任何结构性调整（合并/拆分/重排/新增）都不在这个
+    Skill 的职责范围内。
+
+
+    **原因：**
+
+    - mindmap.md 是讲者在 `/plan-mindmap` 阶段经过深思熟虑确认的结构决策
+
+    - 合并章节会改变听众接收信息的节奏和章节间的逻辑关系
+
+    - 即使 AI 认为合并"更合理"，这个判断应该由讲者而非 AI 做出
+
+
+    **如果您确实想合并这两章，正确的流程是：**
+
+    1. 回到 `/plan-mindmap` 修改 mindmap.md（在那里做结构调整）
+
+    2. 修改完成后，再重新运行 `/slide-content-and-scripts`
+
+
+    **当前我会严格按照现有 mindmap 的双章节结构生成：**
+
+    - §2.1 监控体系建设 → 独立章节，含小开门/论点 Slides/小关门
+
+    - §2.2 告警分级优化 → 独立章节，含小开门/论点 Slides/小关门
+
+
+    要继续按现有 mindmap 生成吗？
+
+    '
+  Judge:
+  - criterion: 明确拒绝了合并章节的请求
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 解释了 mindmap 是唯一骨架（P0 约束）的原因
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 提供了正确的调整流程（去 /plan-mindmap 修改）
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 未执行任何对 mindmap 结构的修改
+    points: 20
+    tags:
+    - axis:accuracy
+  - criterion: 告知了会按现有结构继续生成
+    points: 20
+    tags:
+    - axis:accuracy
+- id: case_6
+  input: "/slide-content-and-scripts \n（当前目录下已有手工修改过的 slide-content.md，但用户更新了 mindmap.md\
+    \ 中的第三章标题）"
+  skill_type: content-generation
+  notes: 验证增量更新保护机制（Re-entry），防止暴力覆盖
+  expected_output: '检测到 slide-content.md 已经存在。为了避免覆盖您可能做过的大量手工修改，
+
+    是否只针对更新的第三章进行「增量更新」（保留其他章节手工改动），还是全量重写？'
+  Judge:
+  - criterion: 发现目标文件已存在时，主动提出拦截确认，没有直接全盘覆盖重写
+    points: 40
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: 提出了「增量更新（Diff）」的选项
+    points: 30
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: 将决策权交给讲者（增量 vs 全量）
+    points: 30
+    tags:
+    - axis:accuracy
+    - type:positive
+- id: case_7
+  input: 处理论点 §2.1 性能优化实践（details 中包含了 3 份不同的监控图表截图素材和 3 段独立的长篇案例故事）。
+  skill_type: content-generation
+  notes: 验证复杂素材的分页拆分能力，确保空姐效应
+  expected_output: '## Slide 2-a 性能优化实践（一）
+
+    ...图表 1...
+
+    ## Slide 2-b 性能优化实践（二）
+
+    ...图表 2...'
+  Judge:
+  - criterion: 准确识别到单页素材过载，主动将其拆分为 Slide 2-a, 2-b (或类似子页)
+    points: 50
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: 拆分后的每一页都保持了独立的视觉重点和空姐效应约束
+    points: 50
+    tags:
+    - axis:accuracy
+    - type:positive
+- id: case_8
+  input: 请生成最后的大关门页。
+  skill_type: content-generation
+  notes: 验证大关门页的可复述记忆地图设计
+  expected_output: '## 大关门 Slide（目标：听众能3分钟内向同事复述核心内容）
+
+    **PPT 上放：**
+
+    ...[可复述的记忆地图]...'
+  Judge:
+  - criterion: 包含了「目标：听众能3分钟内向同事复述核心内容」的提示
+    points: 40
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: PPT 内容设计了一张结构化的「可复述的记忆地图」（包含核心脉络，而不是松散列表）
+    points: 30
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: 演讲口头说是一段精炼的短句，将全场压缩成一个易于背诵的精华
+    points: 30
+    tags:
+    - axis:accuracy
+    - type:positive

@@ -1,0 +1,330 @@
+testcases:
+- id: case_0
+  input: /learn
+  skill_type: conversational-guide
+  notes: 正常触发（有 learnings 记录）—— 验证 Preamble 统计信息的完整性和格式准确性，以及功能菜单的正确展示
+  context:
+    learnings_jsonl: '{"ts":"2026-04-10T08:30:00Z","skill":"ppt-hours","type":"pitfall","key":"opening-too-abstract","insight":"开门太抽象，缺少具体场景，听众前30秒失去兴趣","confidence":8,"source":"observed","context":"share/engineer"}
+
+      {"ts":"2026-04-08T14:20:00Z","skill":"ppt-review","type":"correction","key":"slide-too-dense","insight":"单页内容超过5个要点，听众注意力分散，需要拆成多页","confidence":6,"source":"inferred","context":"share"}
+
+      {"ts":"2026-04-07T10:00:00Z","skill":"plan-mindmap","type":"insight","key":"contrast-structure","insight":"用反差结构（现状vs理想）开篇比故事开篇更有冲击力","confidence":9,"source":"user-stated","context":"general"}
+
+      {"ts":"2026-03-20T09:15:00Z","skill":"ppt-hours","type":"pitfall","key":"missing-audience-profile","insight":"没有做好听众画像导致内容深度不匹配","confidence":7,"source":"inferred","context":"share"}
+
+      {"ts":"2026-03-10T16:00:00Z","skill":"ppt-review","type":"preference","key":"action-call-ending","insight":"结尾用行动号召（听完去做一件事）比总结式结尾更有力","confidence":9,"source":"user-stated","context":"general"}
+
+      {"ts":"2026-02-28T11:00:00Z","skill":"plan-details","type":"pitfall","key":"too-many-examples","insight":"案例过多导致节奏拖沓，每个论点最多2个案例","confidence":5,"source":"observed","context":"share/engineer"}
+
+      {"ts":"2026-02-14T08:00:00Z","skill":"plan-mindmap","type":"pitfall","key":"vague-structure","insight":"结构太模糊，听众不知道整体讲了什么","confidence":3,"source":"inferred","context":"share"}
+
+      {"ts":"2026-01-20T10:30:00Z","skill":"ppt-hours","type":"preference","key":"30min-max","insight":"分享时间超过30分钟注意力明显下降，建议控制在25分钟内","confidence":8,"source":"user-stated","context":"general"}
+
+      {"ts":"2025-12-15T15:00:00Z","skill":"gen-slides","type":"pitfall","key":"table-layout-broken","insight":"python-pptx
+      复杂表格样式会失真，用截图替代","confidence":10,"source":"observed","context":"general"}
+
+      {"ts":"2025-12-01T09:00:00Z","skill":"ppt-review","type":"insight","key":"pyramid-for-report","insight":"汇报型分享用金字塔结构（结论先行）比故事型叙事说服力强3倍","confidence":8,"source":"inferred","context":"report"}
+
+      {"ts":"2025-11-20T14:00:00Z","skill":"ppt-hours","type":"correction","key":"dont-start-background","insight":"大多数分享不需要背景介绍页，直接从听众痛点或核心结论开始","confidence":7,"source":"user-stated","context":"share"}
+
+      {"ts":"2025-10-30T10:00:00Z","skill":"plan-mindmap","type":"preference","key":"3-chapter-max","insight":"三章结构比五章结构更容易让听众记住骨架","confidence":8,"source":"user-stated","context":"general"}
+
+      '
+  expected_output: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  \U0001F415\
+    \ pptdog learnings 管理\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n\
+    \  共 12 条记录\n  pitfall: 5  |  insight: 3  |  correction: 2  |  preference: 2\n\
+    \  平均置信度：7.5/10\n\n  最近 7 天新增：3 条\n  • [ppt-hours / pitfall] opening-too-abstract\
+    \  (8/10) — 2026-04-10\n  • [ppt-review / correction] slide-too-dense  (6/10)\
+    \ — 2026-04-08\n  • [plan-mindmap / insight] contrast-structure  (9/10) — 2026-04-07\n\
+    \n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n你想对 learnings 做什么？\n\
+    \nA. 浏览全部（分页）                ← 推荐（第一次进来先看看积累了什么）\nB. 按 skill 过滤\nC. 按场景过滤（分享/汇报）\n\
+    D. 搜索关键词\nE. 修剪低置信度条目（< 5分）\nF. 删除某条记录\nG. 手动添加经验\nH. 导出为 Markdown 报告\n0. 退出\n\
+    \n\U0001F4A1 第一次使用建议选 A 浏览全貌；有具体关键词时选 D 最快；想清理数据质量时选 E。\n"
+  Judge:
+  - criterion: Preamble 统计块完整：总条数/四类类型分布/平均置信度/最近7天新增
+    points: 15
+    tags:
+    - axis:accuracy
+  - criterion: 最近7天新增列出了具体的3条条目（按时间倒序），包含skill/type/key/置信度/日期
+    points: 15
+    tags:
+    - axis:accuracy
+  - criterion: 四种类型均显示（即使preference只有2条也要显示）
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 平均置信度保留一位小数
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 功能菜单包含 A-H 和 0 共9个选项
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: A 选项有推荐标注，末尾有使用提示
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: Preamble 和菜单之间有视觉分隔
+    points: 14
+    tags:
+    - axis:accuracy
+- id: case_1
+  input: /learn
+  skill_type: conversational-guide
+  notes: 空库触发 —— 验证 learnings.jsonl 为空或不存在时的降级处理，应包含空提示、积累时机说明、完整菜单（含 G 手动添加引导）
+  context:
+    learnings_jsonl: ''
+  expected_output: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  \U0001F415\
+    \ pptdog learnings 管理\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n\
+    \  暂无 learnings 记录。\n\n  pptdog 会在以下时机自动积累经验：\n  • /ppt-review 发现问题时（写 pitfall）\n\
+    \  • 用户修改 AI 建议时（写 correction）\n  • 用户明确表达偏好时（写 preference）\n  • 某个环节特别顺利时（写 insight）\n\
+    \n  你也可以选择 [G] 手动添加经验。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\
+    \n你想对 learnings 做什么？\n\nA. 浏览全部（分页）\nB. 按 skill 过滤\nC. 按场景过滤（分享/汇报）\nD. 搜索关键词\n\
+    E. 修剪低置信度条目（< 5分）\nF. 删除某条记录\nG. 手动添加经验                    ← 推荐（从这里开始记录你的第一条经验）\n\
+    H. 导出为 Markdown 报告\n0. 退出\n\n\U0001F4A1 现在是积累经验的好时机：如果你刚做完一场分享或一次 review，可以用 [G]\
+    \ 把感受记下来。\n"
+  Judge:
+  - criterion: Preamble 区域不显示统计数字，而是显示空库提示
+    points: 15
+    tags:
+    - axis:accuracy
+  - criterion: 列出了4种自动积累经验的时机（pitfall/correction/preference/insight）
+    points: 15
+    tags:
+    - axis:accuracy
+  - criterion: 明确提示用户可以选 [G] 手动添加
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 功能菜单完整（A-H + 0），G 选项有特殊推荐标注
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 末尾使用提示与空库状态呼应，鼓励用户开始记录
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 没有报错信息，优雅降级处理
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 没有显示 0 条/空类型分布这种无意义的统计
+    points: 14
+    tags:
+    - axis:accuracy
+- id: case_2
+  input: A
+  skill_type: conversational-guide
+  notes: 选 A 浏览全部 —— 验证分页格式正确性：星号置信度（N实心+10-N空心）、条目格式（#N/类型/置信度/insight/来源/场景/时间）、第1页10条、页尾导航
+  context:
+    previous_action: 用户已看到 Preamble + 菜单，选择了 A
+    learnings_jsonl: '{"ts":"2026-04-10T08:30:00Z","skill":"ppt-hours","type":"pitfall","key":"opening-too-abstract","insight":"开门太抽象，缺少具体场景，听众前30秒失去兴趣","confidence":8,"source":"observed","context":"share/engineer"}
+
+      {"ts":"2026-04-08T14:20:00Z","skill":"ppt-review","type":"correction","key":"slide-too-dense","insight":"单页内容超过5个要点，听众注意力分散，需要拆成多页","confidence":6,"source":"inferred","context":"share"}
+
+      {"ts":"2026-04-07T10:00:00Z","skill":"plan-mindmap","type":"insight","key":"contrast-structure","insight":"用反差结构（现状vs理想）开篇比故事开篇更有冲击力","confidence":9,"source":"user-stated","context":"general"}
+
+      {"ts":"2026-03-20T09:15:00Z","skill":"ppt-hours","type":"pitfall","key":"missing-audience-profile","insight":"没有做好听众画像导致内容深度不匹配","confidence":7,"source":"inferred","context":"share"}
+
+      {"ts":"2026-03-10T16:00:00Z","skill":"ppt-review","type":"preference","key":"action-call-ending","insight":"结尾用行动号召（听完去做一件事）比总结式结尾更有力","confidence":9,"source":"user-stated","context":"general"}
+
+      {"ts":"2026-02-28T11:00:00Z","skill":"plan-details","type":"pitfall","key":"too-many-examples","insight":"案例过多导致节奏拖沓，每个论点最多2个案例","confidence":5,"source":"observed","context":"share/engineer"}
+
+      {"ts":"2026-02-14T08:00:00Z","skill":"plan-mindmap","type":"pitfall","key":"vague-structure","insight":"结构太模糊，听众不知道整体讲了什么","confidence":3,"source":"inferred","context":"share"}
+
+      {"ts":"2026-01-20T10:30:00Z","skill":"ppt-hours","type":"preference","key":"30min-max","insight":"分享时间超过30分钟注意力明显下降，建议控制在25分钟内","confidence":8,"source":"user-stated","context":"general"}
+
+      {"ts":"2025-12-15T15:00:00Z","skill":"gen-slides","type":"pitfall","key":"table-layout-broken","insight":"python-pptx
+      复杂表格样式会失真，用截图替代","confidence":10,"source":"observed","context":"general"}
+
+      {"ts":"2025-12-01T09:00:00Z","skill":"ppt-review","type":"insight","key":"pyramid-for-report","insight":"汇报型分享用金字塔结构（结论先行）比故事型叙事说服力强3倍","confidence":8,"source":"inferred","context":"report"}
+
+      {"ts":"2025-11-20T14:00:00Z","skill":"ppt-hours","type":"correction","key":"dont-start-background","insight":"大多数分享不需要背景介绍页，直接从听众痛点或核心结论开始","confidence":7,"source":"user-stated","context":"share"}
+
+      {"ts":"2025-10-30T10:00:00Z","skill":"plan-mindmap","type":"preference","key":"3-chapter-max","insight":"三章结构比五章结构更容易让听众记住骨架","confidence":8,"source":"user-stated","context":"general"}
+
+      '
+  expected_output: "全部记录（共 12 条，第 1 页 / 共 2 页）\n\n#1  [ppt-hours / pitfall]  opening-too-abstract\n\
+    \    ★★★★★★★★☆☆  8/10\n    开门太抽象，缺少具体场景，听众前30秒失去兴趣\n    来源: observed  |  场景: share/engineer\
+    \  |  时间: 2026-04-10\n\n#2  [ppt-review / correction]  slide-too-dense\n    ★★★★★★☆☆☆☆\
+    \  6/10\n    单页内容超过5个要点，听众注意力分散，需要拆成多页\n    来源: inferred  |  场景: share  |  时间:\
+    \ 2026-04-08\n\n#3  [plan-mindmap / insight]  contrast-structure\n    ★★★★★★★★★☆\
+    \  9/10\n    用反差结构（现状vs理想）开篇比故事开篇更有冲击力\n    来源: user-stated  |  场景: general  |\
+    \  时间: 2026-04-07\n\n#4  [ppt-hours / pitfall]  missing-audience-profile\n   \
+    \ ★★★★★★★☆☆☆  7/10\n    没有做好听众画像导致内容深度不匹配\n    来源: inferred  |  场景: share  | \
+    \ 时间: 2026-03-20\n\n#5  [ppt-review / preference]  action-call-ending\n    ★★★★★★★★★☆\
+    \  9/10\n    结尾用行动号召（听完去做一件事）比总结式结尾更有力\n    来源: user-stated  |  场景: general  |\
+    \  时间: 2026-03-10\n\n#6  [plan-details / pitfall]  too-many-examples\n    ★★★★★☆☆☆☆☆\
+    \  5/10\n    案例过多导致节奏拖沓，每个论点最多2个案例\n    来源: observed  |  场景: share/engineer  |\
+    \  时间: 2026-02-28\n\n#7  [plan-mindmap / pitfall]  vague-structure\n    ★★★☆☆☆☆☆☆☆\
+    \  3/10\n    结构太模糊，听众不知道整体讲了什么\n    来源: inferred  |  场景: share  |  时间: 2026-02-14\n\
+    \n#8  [ppt-hours / preference]  30min-max\n    ★★★★★★★★☆☆  8/10\n    分享时间超过30分钟注意力明显下降，建议控制在25分钟内\n\
+    \    来源: user-stated  |  场景: general  |  时间: 2026-01-20\n\n#9  [gen-slides / pitfall]\
+    \  table-layout-broken\n    ★★★★★★★★★★  10/10\n    python-pptx 复杂表格样式会失真，用截图替代\n\
+    \    来源: observed  |  场景: general  |  时间: 2025-12-15\n\n#10  [ppt-review / insight]\
+    \  pyramid-for-report\n     ★★★★★★★★☆☆  8/10\n     汇报型分享用金字塔结构（结论先行）比故事型叙事说服力强3倍\n\
+    \     来源: inferred  |  场景: report  |  时间: 2025-12-01\n\n─────────────────────────────────────────────────────\n\
+    [n] 下一页  [p] 上一页（当前第1页）  [m] 返回菜单\n"
+  Judge:
+  - criterion: 标题显示总条数和分页信息（第1页/共2页）
+    points: 15
+    tags:
+    - axis:accuracy
+  - criterion: 按时间倒序排列，最新的排在最前面
+    points: 15
+    tags:
+    - axis:accuracy
+  - criterion: 每条格式：#序号 [skill/type] key / 星号置信度 X/10 / insight文本 / 来源|场景|时间
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 星号置信度准确：8分=8颗★+2颗☆，9分=9颗★+1颗☆，10分=10颗★，以此类推
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 第1页正好10条，第11-12条留到第2页
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 页尾导航包含 [n]/[p]/[m] 三个操作
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 条目之间有空行分隔，格式整齐
+    points: 14
+    tags:
+    - axis:accuracy
+- id: case_3
+  input: E
+  skill_type: conversational-guide
+  notes: 选 E 修剪低置信度 —— 验证：正确识别 confidence < 5 的条目（排除 user-stated）、展示待删清单并标注受保护数量、Ql-3
+    二次确认默认为取消
+  context:
+    previous_action: 用户已看到 Preamble + 菜单，选择了 E
+    learnings_jsonl: '{"ts":"2026-04-10T08:30:00Z","skill":"ppt-hours","type":"pitfall","key":"opening-too-abstract","insight":"开门太抽象，缺少具体场景，听众前30秒失去兴趣","confidence":8,"source":"observed","context":"share/engineer"}
+
+      {"ts":"2026-02-14T08:00:00Z","skill":"plan-mindmap","type":"pitfall","key":"vague-structure","insight":"结构太模糊，听众不知道整体讲了什么","confidence":3,"source":"inferred","context":"share"}
+
+      {"ts":"2026-01-10T10:00:00Z","skill":"ppt-review","type":"pitfall","key":"weak-conclusion","insight":"结尾太软，没有明确告诉听众该做什么","confidence":2,"source":"inferred","context":"general"}
+
+      {"ts":"2025-12-20T09:00:00Z","skill":"ppt-hours","type":"preference","key":"no-animation","insight":"我不喜欢动画效果，简洁静态页面更专业","confidence":4,"source":"user-stated","context":"general"}
+
+      {"ts":"2025-11-15T14:00:00Z","skill":"plan-details","type":"pitfall","key":"data-without-context","insight":"数据没有对比基准，听众不知道好不好","confidence":4,"source":"observed","context":"share"}
+
+      '
+  expected_output: "以下条目置信度 < 5 分，建议删除（共 3 条）：\n\n  #1  [plan-mindmap / pitfall] \
+    \ vague-structure  (3/10)\n      结构太模糊，听众不知道整体讲了什么\n      来源: inferred  |  场景:\
+    \ share  |  时间: 2026-02-14\n\n  #2  [ppt-review / pitfall]  weak-conclusion  (2/10)\n\
+    \      结尾太软，没有明确告诉听众该做什么\n      来源: inferred  |  场景: general  |  时间: 2026-01-10\n\
+    \n  #3  [plan-details / pitfall]  data-without-context  (4/10)\n      数据没有对比基准，听众不知道好不好\n\
+    \      来源: observed  |  场景: share  |  时间: 2025-11-15\n\n注意：source=user-stated\
+    \ 的条目已跳过（共 1 条受保护）\n\n─────────────────────────────────────────────────────\n\n\
+    确认删除以上 3 条低置信度记录？\n\nA. 确认删除（不可恢复）\nB. 取消，返回菜单            ← 推荐（默认安全操作）\n\n\U0001F4A1\
+    \ 被保护的 user-stated 条目不会被删除；如需删除用户添加的条目，请用 [F] 逐条操作。\n"
+  Judge:
+  - criterion: confidence < 5 的条目全部列出（不含 user-stated）：共3条（3分/2分/4分）
+    points: 15
+    tags:
+    - axis:accuracy
+  - criterion: user-stated 条目（no-animation，4分）被跳过，并在末尾标注受保护数量（1条）
+    points: 15
+    tags:
+    - axis:accuracy
+  - criterion: confidence >= 5 的条目（opening-too-abstract，8分）不出现在列表中
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 每条显示 type/key/confidence/insight摘要/来源/时间
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: Ql-3 确认菜单包含 A（确认）和 B（取消），B 为推荐默认
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 底部提示说明 user-stated 保护机制和 [F] 逐条删除的替代路径
+    points: 14
+    tags:
+    - axis:accuracy
+  - criterion: 列表和确认菜单之间有分隔线
+    points: 14
+    tags:
+    - axis:accuracy
+- id: case_4
+  input: G
+  skill_type: conversational-guide
+  notes: 选 G 手动添加经验 —— 验证完整的 6 步引导流程：类型选择→关联skill→场景→key→一句话描述→置信度→JSON预览确认，每步有选项，Step
+    6 预览准确
+  context:
+    previous_action: 用户已看到 Preamble + 菜单，选择了 G，然后依次回答：类型=A(pitfall) → skill=A(ppt-hours)
+      → 场景=B(share) → key=audience-overestimate → insight=我总是高估听众对背景的了解程度，开场前5分钟经常在讲他们已经知道的东西
+      → 置信度=B(7-8，选7)
+    user_responses:
+    - A
+    - A
+    - B
+    - audience-overestimate
+    - 我总是高估听众对背景的了解程度，开场前5分钟经常在讲他们已经知道的东西
+    - B
+  expected_output: "好，我来引导你一步步记录这条经验。\n\n──────────────────────────────────────────\n\
+    \n**Step 1 — 这是哪类经验？**（Ql-5）\n\nA. pitfall    — 踩过的坑（避免重蹈覆辙）            ← 推荐（最常见的经验类型）\n\
+    B. insight    — 发现的规律（某种方法特别有效）\nC. correction — 修正了某个做法（之前做错了，现在知道怎么做对）\nD. preference\
+    \ — 个人偏好（我就是这样喜欢的）\n\n\U0001F4A1 不确定时选 A（pitfall）——踩过坑记下来是最有价值的。\n\n> 你选择了：A（pitfall）\n\
+    \n──────────────────────────────────────────\n\n**Step 2 — 这条经验主要来自哪个步骤？**（Ql-6）\n\
+    \nA. ppt-hours              ← 推荐优先（听众画像和时间规划最容易踩坑）\nB. plan-mindmap\nC. plan-details\n\
+    D. slide-content-and-scripts\nE. ppt-review\nF. gen-slides\n0. 不确定/通用\n\n\U0001F4A1\
+    \ 关联到具体 skill 后，下次运行该 skill 时会自动展示这条经验作为提示。\n\n> 你选择了：A（ppt-hours）\n\n──────────────────────────────────────────\n\
+    \n**Step 3 — 适用于哪种演讲场景？**（Ql-7）\n\nA. 通用（general）          ← 推荐（大多数经验两种场景都适用）\n\
+    B. 分享型（share）\nC. 汇报型（report）\n\n\U0001F4A1 如果不确定，选通用——过于具体的场景标注会导致经验在其他场景下被忽略。\n\
+    \n> 你选择了：B（share）\n\n──────────────────────────────────────────\n\n**Step 4 —\
+    \ 给这条经验一个标识和描述**\n\n用一个简短的 key 标识（如 opening-too-abstract，kebab-case 格式）：\n\n>\
+    \ 你填写的 key：audience-overestimate\n\n用一句话描述这条经验：\n\n> 你填写的描述：我总是高估听众对背景的了解程度，开场前5分钟经常在讲他们已经知道的东西\n\
+    \n──────────────────────────────────────────\n\n**Step 5 — 你对这条经验的置信度是？**（Ql-8）\n\
+    \nA. 9-10 — 非常确定（亲身验证多次，或用户明确说过）      ← 推荐（用 9 表示高置信）\nB. 7-8  — 比较确定（发生过一两次，逻辑上说得通）\n\
+    C. 5-6  — 一般（只发生过一次，或 AI 推断）\nD. 1-4  — 不太确定（感觉可能对，但没有验证）\nE. 自定义：输入具体数字 1-10\n\
+    \n\U0001F4A1 置信度 < 5 的条目会在修剪时被优先删除；user-stated 来源的条目不参与自动衰减。\n\n> 你选择了：B（7-8），取值\
+    \ 7\n\n──────────────────────────────────────────\n\n**Step 6 — 预览并确认写入**\n\n\
+    即将写入以下记录：\n\n```json\n{\n  \"ts\": \"2026-04-17T00:00:00Z\",\n  \"skill\": \"\
+    ppt-hours\",\n  \"type\": \"pitfall\",\n  \"key\": \"audience-overestimate\",\n\
+    \  \"insight\": \"我总是高估听众对背景的了解程度，开场前5分钟经常在讲他们已经知道的东西\",\n  \"confidence\": 7,\n\
+    \  \"source\": \"user-stated\",\n  \"context\": \"share\"\n}\n```\n\n写入 ~/.pptdog/learnings.jsonl？（Ql-9）\n\
+    \nA. 确认写入                ← 推荐\nB. 重新填写（从 Step 1 开始）\nC. 取消，不写入\n\n\U0001F4A1 写入后这条经验会在\
+    \ /ppt-hours 运行时自动加载，帮助 AI 更了解你的偏好。\n"
+  Judge:
+  - criterion: 完整展示6个步骤，每步都有选项（A/B/C/D 格式）
+    points: 12
+    tags:
+    - axis:accuracy
+  - criterion: 每步回显用户的选择（'你选择了：X'），形成完整的对话记录感
+    points: 11
+    tags:
+    - axis:accuracy
+  - criterion: Step 4 分两次输入：先 key（kebab-case 格式提示），再 insight（一句话）
+    points: 11
+    tags:
+    - axis:accuracy
+  - criterion: Step 5 置信度选项 B(7-8) 用户选后取值7，source 自动设为 user-stated
+    points: 11
+    tags:
+    - axis:accuracy
+  - criterion: Step 6 JSON 预览字段与用户输入完全一致（skill=ppt-hours/type=pitfall/context=share/confidence=7/source=user-stated）
+    points: 11
+    tags:
+    - axis:accuracy
+  - criterion: ts 字段为当前时间的 ISO-8601 格式
+    points: 11
+    tags:
+    - axis:accuracy
+  - criterion: Ql-9 确认菜单包含 A/B/C 三个选项，A 为推荐
+    points: 11
+    tags:
+    - axis:accuracy
+  - criterion: 底部提示说明写入后经验如何被使用
+    points: 11
+    tags:
+    - axis:accuracy
+  - criterion: 每步之间有分隔线，视觉层次清晰
+    points: 11
+    tags:
+    - axis:accuracy
