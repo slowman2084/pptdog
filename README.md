@@ -22,8 +22,8 @@ pptdog 的每一步都在逼你做这件事：
 | 步骤 | 逼你思考什么 |
 |------|------------|
 | /ppt-hours | 我说的东西，听众真的不知道吗？ |
+| /plan-details | 我的素材够不够？有没有真实案例？ |
 | /plan-mindmap | 我的论点之间有真正的逻辑关系吗？ |
-| /plan-details | 每个论点，我有真实案例吗？有推导过程吗？ |
 | /slide-content-and-scripts | 我能不靠读 PPT 把这些讲出来吗？ |
 | /ppt-review | 如果我是最挑剔的听众，这个分享打几分？ |
 
@@ -40,14 +40,14 @@ pptdog 的每一步都在逼你做这件事：
 │  └── 输出：ppt-hours.md（听众画像 + 一句话主题）                                │
 │          │                                                                   │
 │          ▼                                                                   │
-│  /plan-mindmap                                                               │
-│  ├── 提供 2-3 个有实质差异的结构方案，讲者选择并确认                              │
-│  └── 输出：mindmap.md（分享骨架/大纲）                                          │
+│  /plan-details                                                               │
+│  ├── 把原始素材整理清楚，按分类（证据/思考结论/行动）构建关联关系                 │
+│  └── 输出：details.md（素材库 + 关联关系）                                      │
 │          │                                                                   │
 │          ▼                                                                   │
-│  /plan-details                                                               │
-│  ├── 逐章节逐论点填充血肉，挖掘证据、案例、故事，深度自检                          │
-│  └── 输出：details.md（论点 + 素材 + 演讲者思路）                               │
+│  /plan-mindmap                                                               │
+│  ├── 基于 details.md 提供 2-3 个有差异的结构方案，讲者确认                        │
+│  └── 输出：mindmap.md（分享骨架/大纲）                                          │
 │          │                                                                   │
 │          ▼                                                                   │
 │  /slide-content-and-scripts                                                  │
@@ -75,8 +75,8 @@ pptdog 的每一步都在逼你做这件事：
 | Skill | 触发命令 | 一句话说明 |
 |-------|---------|----------|
 | PPT Hours | `/ppt-hours` | 演讲前的战略思考：搞清楚听众、主题和断舍离边界 |
-| Plan Mindmap | `/plan-mindmap` | 提供 2-3 个结构方案，讲者选一个作为整个分享的骨架 |
-| Plan Details | `/plan-details` | 逐论点挖掘血肉：证据、案例、故事、深度自检 |
+| Plan Details | `/plan-details` | 整理原始素材（证据/思考结论/行动），构建关联关系，作为结构设计的血肉 |
+| Plan Mindmap | `/plan-mindmap` | 基于整理好的素材库，提供 2-3 个结构方案，讲者选一个作为分享骨架 |
 | Slide Content and Scripts | `/slide-content-and-scripts` | 把 details.md 转化为每页 Slide 内容规划 + 演讲口头说，包含开门关门、小开关门、图片引用 |
 | PPT Review | `/ppt-review` | 生成前最后一道关：AI 扮演最挑剔的听众，三层九项打分 |
 | Gen Slides | `/gen-slides` | 把内容稿转为真正的 .pptx 文件，内容是输入，格式是输出 |
@@ -92,11 +92,11 @@ pptdog 的每一步都在逼你做这件事：
    → AI 帮你问清楚：场合是什么？听众是谁？想说什么？
    → 输出听众画像 + 一句话主题
 
-2. 运行 /plan-mindmap
-   → AI 提供 2-3 个结构方案，你选一个
+2. 运行 /plan-details
+   → AI 帮你把脑子里的原始素材梳理清楚，构建关联关系
 
-3. 运行 /plan-details
-   → AI 逐论点帮你挖素材、找案例
+3. 运行 /plan-mindmap
+   → AI 基于梳理好的素材，提供 2-3 个结构方案，你选一个
 
 4. 运行 /slide-content-and-scripts
    → 内容稿出炉
@@ -127,8 +127,10 @@ pptdog 的每一步都在逼你做这件事：
    → AI 读取素材，提取候选主题，帮你断舍离
 
 2. 运行 /plan-details
-   → 直接跳过 mindmap，对已有内容深化和自检
-   （如果结构需要重组，可以插入 /plan-mindmap）
+   → 对已有内容深化、提取素材库，方便后续验证或重组
+
+3. 运行 /plan-mindmap
+   → 若素材结构需要重组，由 AI 提供新的逻辑方案
 
 （后续步骤同入口 A 的 4-6）
 ```
@@ -149,8 +151,8 @@ pptdog 的每一步都在逼你做这件事：
 └── projects/
     └── <slug>/                  # 每个演讲对应一个独立项目目录
         ├── ppt-hours.md         # 听众画像 + 一句话主题（/ppt-hours 输出）
+        ├── details.md           # 素材血肉与关联关系（/plan-details 输出）
         ├── mindmap.md           # 分享骨架/大纲（/plan-mindmap 输出）
-        ├── details.md           # 论点血肉（/plan-details 输出）
         ├── slide-content.md     # 完整内容稿，逐页结构（/slide-content-and-scripts 输出）
         ├── review.md            # 内容评审报告（/ppt-review 输出）
         ├── timeline.jsonl       # 项目事件时间线（各 Skill 追加写入）
