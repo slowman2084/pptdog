@@ -317,3 +317,28 @@ testcases:
     points: 20
     tags:
     - axis:accuracy
+- id: case_6
+  input: 处理 M01：线上事故复盘。 (此时 references/ 目录下已经有一份 incident_report.md，里面写明了背景是双十一大促，冲突是DB宕机，结果是耗时4小时恢复)
+  skill_type: conversational-guide
+  notes: 验证防反感机制（先查后问）：不应该做伸手党
+  expected_output: '关于 M01 线上事故复盘：我刚才查阅了 references/ 里的 incident_report.md，看到了这是双十一期间的DB宕机事故（背景和冲突很清晰），也看到了恢复耗时（结果）。
+
+    但报告里没有提到：你当时做决定的心理活动是怎样的？为什么选了这个恢复方案而不是另一个？（这是你在台上的个人价值）
+
+    能补充一下这部分吗？'
+  Judge:
+  - criterion: 主动检索了 references/ 或其他上下文材料，没有盲目套用【背景/冲突/解决/结果】的通用追问模板
+    points: 40
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: 准确提取了材料中已有的信息，向讲者证明自己"已经看过了"
+    points: 30
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: 只针对真正缺失的部分（如个人决策心理）发起了定制化的深度追问
+    points: 30
+    tags:
+    - axis:accuracy
+    - type:positive
