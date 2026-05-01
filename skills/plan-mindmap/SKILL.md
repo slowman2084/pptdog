@@ -62,7 +62,7 @@ fi
 ### 2. 读取 ppt-hours.md
 
 ```bash
-cat ~/.pptdog/projects/$SLUG/ppt-hours.md 2>/dev/null || echo "NOT_FOUND"
+cat $(readlink -f ~/.pptdog/projects/$SLUG 2>/dev/null || echo ~/.pptdog/projects/$SLUG)/ppt-hours.md 2>/dev/null || echo "NOT_FOUND"
 ```
 
 **若文件存在**，提取并展示摘要：
@@ -91,7 +91,7 @@ cat ~/.pptdog/projects/$SLUG/ppt-hours.md 2>/dev/null || echo "NOT_FOUND"
 ### 2.5. 读取并解析 details.md（核心输入）
 
 ```bash
-cat ~/.pptdog/projects/$SLUG/details.md 2>/dev/null || echo "NOT_FOUND"
+cat $(readlink -f ~/.pptdog/projects/$SLUG 2>/dev/null || echo ~/.pptdog/projects/$SLUG)/details.md 2>/dev/null || echo "NOT_FOUND"
 ```
 
 > **details.md 是 plan-mindmap 最重要的输入。**
@@ -813,7 +813,7 @@ D. 确认，进入下一步（/slide-content-and-scripts）
 用户确认后，写入思维导图文件：
 
 ```bash
-cat > ~/.pptdog/projects/$SLUG/mindmap.md << 'EOF'
+cat > $(readlink -f ~/.pptdog/projects/$SLUG 2>/dev/null || echo ~/.pptdog/projects/$SLUG)/mindmap.md << 'EOF'
 # [一句话主题] — 思维导图
 生成时间：<ISO 时间>
 结构方案：[方案A/B/C] — [方案名称]

@@ -78,7 +78,7 @@ fi
 ### 2. 评审通过验证（非阻塞）
 
 ```bash
-cat ~/.pptdog/projects/$SLUG/review.md 2>/dev/null | grep "综合均分"
+cat $(readlink -f ~/.pptdog/projects/$SLUG 2>/dev/null || echo ~/.pptdog/projects/$SLUG)/review.md 2>/dev/null | grep "综合均分"
 ```
 
 - **review.md 存在且综合均分 ≥ 7** → ✅ 内容已通过评审，继续
@@ -98,7 +98,7 @@ C. 直接生成，跳过所有提醒
 ### 3. 读取 slide-content.md
 
 ```bash
-cat ~/.pptdog/projects/$SLUG/slide-content.md
+cat $(readlink -f ~/.pptdog/projects/$SLUG 2>/dev/null || echo ~/.pptdog/projects/$SLUG)/slide-content.md
 ```
 
 解析提取：
@@ -118,7 +118,7 @@ cat ~/.pptdog/projects/$SLUG/slide-content.md
 ls ~/.pptdog/templates/*.pptx 2>/dev/null && echo "TEMPLATE_FOUND" || echo "NO_TEMPLATE"
 
 # 检测用户项目级模板（若有）
-ls ~/.pptdog/projects/$SLUG/template.pptx 2>/dev/null && echo "PROJECT_TEMPLATE_FOUND" || true
+ls $(readlink -f ~/.pptdog/projects/$SLUG 2>/dev/null || echo ~/.pptdog/projects/$SLUG)/template.pptx 2>/dev/null && echo "PROJECT_TEMPLATE_FOUND" || true
 
 # 检测常见公司模板路径
 for p in \
@@ -311,7 +311,7 @@ INVOKE_SKILL ppt-generator-pro
 （等待图片生成完成）
 
 # 检查图片是否生成
-ls ~/.pptdog/projects/$SLUG/slides/images/ 2>/dev/null | wc -l
+ls $(readlink -f ~/.pptdog/projects/$SLUG 2>/dev/null || echo ~/.pptdog/projects/$SLUG)/slides/images/ 2>/dev/null | wc -l
 
 # 串联调用 pptx skill 打包
 INVOKE_SKILL pptx
