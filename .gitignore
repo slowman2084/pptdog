@@ -2,3 +2,8 @@
 *.swp
 *.swo
 ~/.pptdog/
+
+# pptdog runtime artifacts
+tmp/
+bak/
+*.patch
