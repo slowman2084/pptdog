@@ -145,6 +145,13 @@ for base_dir in ~/.claude ~/.codex ~/.openclaw ~/.codebuddy ~/.cursor ~/.agents;
   done
 done
 
+
+# 检查归藏 PPT (guizang-ppt-skill) 和 画书 PPT (huashu-design)
+for base_dir in ~/.claude ~/.codex ~/.openclaw ~/.codebuddy ~/.cursor ~/.agents; do
+  [ -d "$base_dir/skills/guizang-ppt-skill" ] && echo "FOUND_SKILL: $base_dir/skills/guizang-ppt-skill (guizang-ppt-skill)"
+  [ -d "$base_dir/skills/huashu-design" ] && echo "FOUND_SKILL: $base_dir/skills/huashu-design (huashu-design)"
+done
+
 # 检查 html-ppt-designer（HTML PPT 生成器）
 # 项目地址：https://github.com/andyhuo520/html-ppt-designer
 for base_dir in ~/.claude ~/.codex ~/.openclaw ~/.codebuddy ~/.cursor ~/.agents; do

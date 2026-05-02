@@ -197,3 +197,31 @@ testcases:
     points: 16
     tags:
     - axis:accuracy
+- id: case_5
+  input: /gen-slides （用户在 Backend 列表中选择了一个状态为【未安装】的 "H. 归藏 PPT Skill"）
+  skill_type: orchestration-dispatch
+  notes: 验证第三方生态插件（归藏PPT/画书PPT）的延迟加载和自动安装逻辑
+  expected_output: '正在自动下载并安装 guizang-ppt-skill...
+
+    [执行 git clone 并 link 到各个 IDE 目录的命令日志]
+
+    ✅ 归藏 PPT 已成功安装到全局 Skills 目录！
+
+
+    [接着平滑进入 Step 2，读取其 SKILL.md 进行格式转换]'
+  Judge:
+  - criterion: 准确捕获用户的选择 (H 或 I)，没有因为其【未安装】状态而报错拒绝
+    points: 30
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: 执行了 git clone 到 ~/.pptdog/skills 目录，并为多个 IDE 建立软链接的逻辑
+    points: 40
+    tags:
+    - axis:accuracy
+    - type:positive
+  - criterion: 安装完成后，能够无缝衔接进入 Step 2 的内容适配阶段，不中断工作流
+    points: 30
+    tags:
+    - axis:accuracy
+    - type:positive
