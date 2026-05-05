@@ -63,8 +63,9 @@ pptdog 的每一步都在逼你做这件事：
 │          ▼                                                                   │
 │  /gen-slides         ← ★ 内容转格式，唯一生成文件的步骤                         │
 │  ├── 执行内容规则（字数检查 / 标题论点化 / 图示占位）                             │
-│  ├── 调用 python-pptx 生成 .pptx 文件                                        │
-│  └── 输出：slides/deck.pptx                                                  │
+│  ├── 扫描环境中已安装的 PPT 生成工具，让用户选择 backend                         │
+│  ├── 把 slide-content.md 适配为对应格式，调用所选工具生成文件                    │
+│  └── 输出：slides/deck.pptx（或 .html，取决于所选 backend）                    │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -79,7 +80,7 @@ pptdog 的每一步都在逼你做这件事：
 | Plan Mindmap | `/plan-mindmap` | 基于整理好的素材库，提供 2-3 个结构方案，讲者选一个作为分享骨架 |
 | Slide Content and Scripts | `/slide-content-and-scripts` | 把 details.md 转化为每页 Slide 内容规划 + 演讲口头说，包含开门关门、小开关门、图片引用 |
 | PPT Review | `/ppt-review` | 生成前最后一道关：AI 扮演最挑剔的听众，三层九项打分 |
-| Gen Slides | `/gen-slides` | 把内容稿转为真正的 .pptx 文件，内容是输入，格式是输出 |
+| Gen Slides | `/gen-slides` | 调度层：扫描环境中已安装的 PPT 生成工具，让用户选择 backend，把内容稿适配后传给对应工具生成文件 |
 
 ---
 
@@ -190,13 +191,18 @@ pptdog 的评审框架和内容方法论来自：
 
 ### 前置依赖
 
-```bash
-# python-pptx（用于 /gen-slides 生成 .pptx 文件）
-uv pip install python-pptx
+`/gen-slides` 本身不生成 PPT，它是一个调度层，把 `slide-content.md` 适配后交给你环境中已安装的工具来生成文件。支持的 backend 如下（任选一种安装即可）：
 
-# 或
-pip install python-pptx
-```
+| Backend | 安装方式 | 输出格式 | 适合场景 |
+|---------|---------|---------|---------|
+| **html-ppt-designer** ⭐ 推荐 | [GitHub](https://github.com/andyhuo520/html-ppt-designer) 或在 AI 编辑器中安装 skill | `.html`（浏览器直接演示） | 不依赖 PPT 软件，视觉效果无损耗 |
+| **pptx skill** | 在 Claude Code / CodeBuddy 等中安装 `pptx` skill | `.pptx` | 支持 .pptx 模板，保留母版/配色/字体 |
+| **NanoBanana PPT Skills** | [GitHub](https://github.com/op7418/NanoBanana-PPT-Skills) | `.pptx` | 参考图驱动风格，效果好 |
+| **python-pptx** | `uv pip install python-pptx` 或 `pip install python-pptx` | `.pptx` | 无需额外 skill，速度快，样式较简单 |
+| **Marp CLI** | `npm install -g @marp-team/marp-cli` | `.pptx` / `.html` | 技术演讲，代码多，Markdown 流 |
+| **结构化 Markdown** | 无需安装 | `.md` | 导入 Gamma / Google Slides / Canva 等工具 |
+
+> 💡 `/gen-slides` 运行时会自动检测环境中已安装的工具，列出可用选项让你选择。未安装任何 backend 时，至少可以导出结构化 Markdown。
 
 ### 安装 pptdog Skills
 
